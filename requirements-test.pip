@@ -6,3 +6,4 @@ pytest-benchmark
 pytest-cov
 pytest-html
 tox
+tox-conda

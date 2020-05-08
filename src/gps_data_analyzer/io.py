@@ -33,7 +33,7 @@ def save(obj, path):
         #     json.dump(metadata, f)
 
         # Zip the files to the destination
-        zip_file = zipfile.ZipFile(path, 'w', compression=zipfile.ZIP_DEFLATED)
+        zip_file = zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED)
         with zip_file:
             zip_file.write(data_file, arcname=os.path.basename(data_file))
             # zip_file.write(metadata_file, arcname=os.path.basename(metadata_file))
@@ -43,12 +43,11 @@ def load(path):
     # Create a temporary directory
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Extract the Zip file
-        zip_file = zipfile.ZipFile(path, 'r', compression=zipfile.ZIP_DEFLATED)
+        zip_file = zipfile.ZipFile(path, "r", compression=zipfile.ZIP_DEFLATED)
         zip_file.extractall(path=tmpdirname)
 
         # Load data
-        data = gpd.read_file(
-            os.path.join(tmpdirname, "data.geojson"), driver="GeoJSON")
+        data = gpd.read_file(os.path.join(tmpdirname, "data.geojson"), driver="GeoJSON")
 
         # Convert time columns
         if "datetime" in data.columns:

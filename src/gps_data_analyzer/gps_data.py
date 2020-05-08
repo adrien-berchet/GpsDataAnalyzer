@@ -46,15 +46,7 @@ class _GpsBase(object):
         time_col = time_col if time_col is not None else self._default_time_col
 
         if not isinstance(df, gpd.GeoDataFrame):
-            self._format_data(
-                df,
-                input_crs,
-                keep_cols,
-                x_col,
-                y_col,
-                z_col,
-                time_col
-            )
+            self._format_data(df, input_crs, keep_cols, x_col, y_col, z_col, time_col)
         if self._has_time:
             self._normalize_data()
 
@@ -84,8 +76,9 @@ class _GpsBase(object):
 
     def __eq__(self, other):
         """Compare two _GpsBase objects"""
-        assert isinstance(other, _GpsBase), ("The operator == is only defined for "
-                                             "'_GpsBase' objects.")
+        assert isinstance(other, _GpsBase), (
+            "The operator == is only defined for " "'_GpsBase' objects."
+        )
         return self.data.equals(other._data)
 
     def __iter__(self):
@@ -126,7 +119,7 @@ class _GpsBase(object):
         y_col,
         z_col=None,
         time_col=None,
-        keep_cols=None
+        keep_cols=None,
     ):
         # Convert time
         if self._has_time:
@@ -149,11 +142,9 @@ class _GpsBase(object):
         )
 
         # Normalize column names
-        gdf.rename(
-            columns={x_col: "x", y_col: "y"}, inplace=True)
+        gdf.rename(columns={x_col: "x", y_col: "y"}, inplace=True)
         if self._has_z:
-            gdf.rename(
-                columns={z_col: "z"}, inplace=True)
+            gdf.rename(columns={z_col: "z"}, inplace=True)
 
         # Reset index
         gdf.reset_index(drop=True, inplace=True)
@@ -170,7 +161,7 @@ class _GpsBase(object):
         # Conpute time delta between consecutive points (in s)
         self.data["dt"] = (
             self.data["datetime"] - self.data["datetime"].shift()
-        ).values / pd.Timedelta(1, 's')
+        ).values / pd.Timedelta(1, "s")
 
         # Conpute distance between consecutive points (in m)
         self.data["dist"] = self.data.distance(self.data.geometry.shift())
@@ -179,8 +170,9 @@ class _GpsBase(object):
         self.data["velocity"] = self.data["dist"] / self.data["dt"]
 
     def add_attribute(self, attr, name=None):
-        assert isinstance(attr, pd.Series), ("The 'attr' argument must be a"
-                                             "pandas.Series")
+        assert isinstance(attr, pd.Series), (
+            "The 'attr' argument must be a" "pandas.Series"
+        )
         if name is not None:
             self.data[name] = attr
         else:
@@ -188,11 +180,13 @@ class _GpsBase(object):
 
     def segments(self):
         """Build segments from the consecutive points"""
-        tmp = self.data[["geometry"]].join(
-            self.data[["geometry"]].shift(), rsuffix="_m1").dropna()
+        tmp = (
+            self.data[["geometry"]]
+            .join(self.data[["geometry"]].shift(), rsuffix="_m1")
+            .dropna()
+        )
         lines = tmp.apply(
-            axis=1,
-            func=lambda x: LineString([x.geometry_m1, x.geometry])
+            axis=1, func=lambda x: LineString([x.geometry_m1, x.geometry])
         )
         lines.name = "geometry"
         segments = self.data[["dt", "dist", "velocity"]].join(lines, how="right")
@@ -215,16 +209,12 @@ def load_poi(path):
     return PoI(io.load(path))
 
 
-def add_masks(
-    gps_data, filename, crs=4326, sep=";", decimal=".", **kwargs
-):
-
+def add_masks(gps_data, filename, crs=4326, sep=";", decimal=".", **kwargs):
     def _get_points_in_masks(masks):
         # Get the points included in masks
         in_mask_pts = pd.Series(np.zeros(len(data)), dtype=bool)
         for num, i in masks.iterrows():
-            in_mask_pts = (
-                in_mask_pts | (data.geometry.distance(i.geometry) <= i.radius))
+            in_mask_pts = in_mask_pts | (data.geometry.distance(i.geometry) <= i.radius)
 
         return in_mask_pts
 

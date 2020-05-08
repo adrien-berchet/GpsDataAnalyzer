@@ -2,15 +2,11 @@ import logging
 
 import cartopy.crs as ccrs
 import cartopy.io.img_tiles as cimgt
-import geopandas as gpd
-from matplotlib.colors import ListedColormap
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import spatial
-from shapely.geometry import LineString
 
-from .plot_utils import create_cmap
 from .plot_utils import add_annotated_points
 
 
@@ -23,7 +19,7 @@ class Extent(object):
         self.inner_xmax = xmax
         self.inner_ymin = ymin
         self.inner_ymax = ymax
-        self.xmin = xmin - border,
+        self.xmin = xmin - border
         self.xmax = xmax + border
         self.ymin = ymin - border
         self.ymax = ymax + border
@@ -37,12 +33,7 @@ class Extent(object):
         self.ymax = self.inner_ymax + border
 
     def __iter__(self):
-        for i in [
-            self.xmin,
-            self.xmax,
-            self.ymin,
-            self.ymax
-        ]:
+        for i in [self.xmin, self.xmax, self.ymin, self.ymax]:
             yield i
 
     def mesh(self, mesh_size=None, x_size=None, y_size=None):
@@ -84,7 +75,7 @@ class Raster(object):
         background=False,
         zoom=14,
         proj=None,
-        annotation_kwargs=None
+        annotation_kwargs=None,
     ):
         """Plot points with background and annotations"""
 
@@ -124,7 +115,8 @@ class Raster(object):
             extent=self.extent,
             origin="upper",
             transform=proj,
-            zorder=10)
+            zorder=10,
+        )
 
         # Add track markers
         x, y = self._xy()
@@ -174,13 +166,15 @@ def compute_rest_time(gps_data, radius):
             inf = data.loc[label_inf]
             inf_m1 = data.loc[label_inf_m1]
             dt_inf = current["datetime"] - inf["datetime"]
-            t_inf_inter = dt_inf + _t_inter(
-                current, inf, inf_m1, max_radius)
-            logger.debug("data:\n{}".format(
-                data.loc[[num, label_inf, label_inf_m1]]))
-            logger.debug("distances = {}".format(
-                data.loc[[label_inf, label_inf_m1], "geometry"].distance(
-                    current["geometry"])))
+            t_inf_inter = dt_inf + _t_inter(current, inf, inf_m1, max_radius)
+            logger.debug("data:\n{}".format(data.loc[[num, label_inf, label_inf_m1]]))
+            logger.debug(
+                "distances = {}".format(
+                    data.loc[[label_inf, label_inf_m1], "geometry"].distance(
+                        current["geometry"]
+                    )
+                )
+            )
         else:
             t_inf_inter = pd.Timedelta(0)
 
@@ -193,13 +187,15 @@ def compute_rest_time(gps_data, radius):
             sup = data.loc[label_sup]
             sup_p1 = data.loc[label_sup_p1]
             dt_sup = sup["datetime"] - current["datetime"]
-            t_sup_inter = dt_sup + _t_inter(
-                current, sup, sup_p1, max_radius)
-            logger.debug("data:\n {}".format(
-                data.loc[[num, label_sup, label_sup_p1]]))
-            logger.debug("distances = {}".format(
-                data.loc[[label_sup, label_sup_p1], "geometry"].distance(
-                    current["geometry"])))
+            t_sup_inter = dt_sup + _t_inter(current, sup, sup_p1, max_radius)
+            logger.debug("data:\n {}".format(data.loc[[num, label_sup, label_sup_p1]]))
+            logger.debug(
+                "distances = {}".format(
+                    data.loc[[label_sup, label_sup_p1], "geometry"].distance(
+                        current["geometry"]
+                    )
+                )
+            )
         else:
             t_sup_inter = pd.Timedelta(0)
 
@@ -240,7 +236,7 @@ def heatmap(
     kernel_size=None,
     kernel_cut=4.0,
     weight_col=None,
-    normalize=True
+    normalize=True,
 ):
     # Get coordinates
     x = gps_data.x
@@ -266,7 +262,7 @@ def heatmap(
 
     # Init sigma if not given
     if kernel_size is None:
-        kernel_size = 2. * mesh_size
+        kernel_size = 2.0 * mesh_size
 
     kde = np.zeros(len(tree.data))
     for num, _x, _y, _w in zip(x, y, weight):  # TODO: optimize this loop
@@ -275,17 +271,18 @@ def heatmap(
         in_radius_pts = tree.query_ball_point(coords_i, kernel_cut * kernel_size)
 
         # Compute distances and divide by the krenel size
-        q = np.squeeze(
-            spatial.distance.cdist(tree.data[in_radius_pts], [coords_i])
-        ) / kernel_size
+        q = (
+            np.squeeze(spatial.distance.cdist(tree.data[in_radius_pts], [coords_i]))
+            / kernel_size
+        )
 
         # Compute KDE contribution
-        res = np.exp(-np.power(q, 2)) / (2. * kernel_size)
+        res = np.exp(-np.power(q, 2)) / (2.0 * kernel_size)
         kde[in_radius_pts] += res * _w
 
     # Normalize KDE
     if not normalize:
-        kde /= kernel_size * np.sqrt(2 * np.pi)  # Useless since we normalize afterwards
+        kde /= kernel_size * np.sqrt(2 * np.pi)
     else:
         kde -= kde.min()
         kde /= kde.max()

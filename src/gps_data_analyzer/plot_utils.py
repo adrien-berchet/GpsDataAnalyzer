@@ -9,7 +9,7 @@ import pandas as pd
 
 
 def create_cmap():
-    default_cmap = plt.get_cmap('rainbow')
+    default_cmap = plt.get_cmap("rainbow")
     cmap = default_cmap(np.arange(default_cmap.N))
     cmap[:, -1] = np.linspace(0, 1, default_cmap.N)
     return ListedColormap(cmap)
@@ -32,10 +32,7 @@ def add_annotated_points(ax, points, **kwargs):
     # Check kwargs and set default values
     def set_default(df, attr, alias=None, val=0):
         cols = df.columns.values
-        name = (
-            attr if attr in cols
-            else None
-        )
+        name = attr if attr in cols else None
         if name is None:
             if isinstance(alias, str) and alias in cols:
                 name = alias
@@ -59,8 +56,8 @@ def add_annotated_points(ax, points, **kwargs):
     x_offset = set_default(pts, "x_offset", val=0)
     y_offset = set_default(pts, "y_offset", val=0)
 
-    arrowprops = kwargs.pop("arrowprops", dict(facecolor='black', shrink=0.05))
-    bbox = kwargs.pop("bbox", dict(facecolor='sandybrown', alpha=0.5, boxstyle='round'))
+    arrowprops = kwargs.pop("arrowprops", dict(facecolor="black", shrink=0.05))
+    bbox = kwargs.pop("bbox", dict(facecolor="sandybrown", alpha=0.5, boxstyle="round"))
 
     # Create a matplotlib transform object for the Geodetic coordinate system
     geodetic_transform = ccrs.Geodetic()._as_mpl_transform(ax)
@@ -69,12 +66,14 @@ def add_annotated_points(ax, points, **kwargs):
     if pts is not None:
         for row in pts.iterrows():
             ax.annotate(
-                row["name"], xy=(row["x"], row["y"]),
+                row["name"],
+                xy=(row["x"], row["y"]),
                 xytext=(row["x"] + row[x_offset], row["y"] + row[y_offset]),
                 arrowprops=arrowprops,
                 xycoords=geodetic_transform,
                 fontsize=row[fontsize],
-                ha=row[ha], va=row[va],
+                ha=row[ha],
+                va=row[va],
                 bbox=bbox,
                 **kwargs
             )
