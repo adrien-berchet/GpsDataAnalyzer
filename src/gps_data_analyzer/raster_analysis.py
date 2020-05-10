@@ -1,10 +1,7 @@
-import logging
-
 import cartopy.crs as ccrs
 import cartopy.io.img_tiles as cimgt
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from scipy import spatial
 
 from .plot_utils import add_annotated_points
