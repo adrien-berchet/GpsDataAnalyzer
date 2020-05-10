@@ -121,9 +121,11 @@ class _GpsBase(object):
         time_col=None,
         keep_cols=None,
     ):
-        # Convert time
+        # Convert time and sort by time
         if self._has_time:
+            df = df.copy()
             df["datetime"] = _convert_time(df[time_col], format=self.datetime_format)
+            df.sort_values("datetime", inplace=True)
 
         # Drop useless columns
         cols = [x_col, y_col]
@@ -155,7 +157,7 @@ class _GpsBase(object):
 
         # Save data
         self.data = gdf
-        self.crs = local_crs
+        self.crs = gdf.crs
 
     def _normalize_data(self):
         # Conpute time delta between consecutive points (in s)
