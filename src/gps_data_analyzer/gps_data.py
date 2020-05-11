@@ -222,6 +222,10 @@ class _GpsBase(object):
 
 
 class GpsPoints(_GpsBase):
+    """
+    Class to wrap a geopandas.GeoDataFrame and format it in order to store GPS
+    points
+    """
     _has_time = True
 
 
@@ -230,6 +234,10 @@ def load_gps_points(path):
 
 
 class PoI(_GpsBase):
+    """
+    Class to wrap a geopandas.GeoDataFrame and format it in order to store Point of
+    Interest points
+    """
     _has_time = False
     _has_z = False
 
@@ -248,33 +256,3 @@ class PoI(_GpsBase):
 
 def load_poi(path):
     return PoI(io.load(path))
-
-
-def add_masks(gps_data, filename, crs=4326, sep=";", decimal=".", **kwargs):
-    def _get_points_in_masks(masks):
-        # Get the points included in masks
-        in_mask_pts = pd.Series(np.zeros(len(data)), dtype=bool)
-        for num, i in masks.iterrows():
-            in_mask_pts = in_mask_pts | (data.geometry.distance(i.geometry) <= i.radius)
-
-        return in_mask_pts
-
-    data = gps_data._data
-
-    # Load masks
-    masks = pd.read_csv(filename, sep=sep, decimal=decimal, **kwargs)
-    masks = gpd.GeoDataFrame(
-        masks, crs=crs, geometry=gpd.points_from_xy(masks["lon"], masks["lat"])
-    )
-    if gps_data.local_crs is not None:
-        masks.to_crs(gps_data.local_crs, inplace=True)
-
-    # Drop points in masks
-    pts_in_mask = _get_points_in_masks(masks)
-    data.drop(pts_in_mask.loc[pts_in_mask].index, inplace=True)
-    data.reset_index(drop=True, inplace=True)
-
-
-def add_pois(gps_data, filename, sep=";", decimal=".", **kwargs):
-    # Load PoIs
-    gps_data.pois = pd.read_csv(filename, sep=sep, decimal=decimal, **kwargs)
