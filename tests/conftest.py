@@ -24,3 +24,23 @@ def simple_gps_df(simple_gps_raw_data):
 @pytest.fixture
 def simple_gps_data(simple_gps_df):
     return gda.GpsPoints(simple_gps_df, x_col="x", y_col="y", z_col="z", time_col="t")
+
+
+@pytest.fixture
+def simple_poi_raw_data():
+    x = [0.5]
+    y = [0.5]
+    r = [0.75]
+    return x, y, r
+
+
+@pytest.fixture
+def simple_poi_df(simple_poi_raw_data):
+    x, y, r = simple_poi_raw_data
+    df = pd.DataFrame({"x": x, "y": y, "radius": r})
+    return df
+
+
+@pytest.fixture
+def simple_poi_data(simple_poi_df):
+    return gda.PoI(simple_poi_df, x_col="x", y_col="y")

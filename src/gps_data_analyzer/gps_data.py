@@ -39,14 +39,23 @@ class _GpsBase(object):
         time_col=None,
     ):
         input_crs = input_crs if input_crs is not None else self._default_input_crs
-        self.crs = local_crs if local_crs is not None else input_crs
+        local_crs = local_crs if local_crs is not None else input_crs
         x_col = x_col if x_col is not None else self._default_x_col
         y_col = y_col if y_col is not None else self._default_y_col
         z_col = z_col if z_col is not None else self._default_z_col
         time_col = time_col if time_col is not None else self._default_time_col
 
         if not isinstance(df, gpd.GeoDataFrame):
-            self._format_data(df, input_crs, keep_cols, x_col, y_col, z_col, time_col)
+            self._format_data(
+                df,
+                input_crs,
+                local_crs,
+                x_col,
+                y_col,
+                z_col,
+                time_col,
+                keep_cols=keep_cols,
+            )
         if self._has_time:
             self._normalize_data()
 
@@ -59,20 +68,16 @@ class _GpsBase(object):
         return self.data.geometry.y
 
     @property
-    def z(self):
-        return self.data["z"]
-
-    @property
     def t(self):
-        return self.data["datetime"]
-
-    @property
-    def index(self):
-        return self.data.index
+        if self._has_time:
+            attr = "datetime"
+        else:
+            attr = "t"
+        return self.__getattr__(attr)
 
     @property
     def xy(self):
-        return self.data.geometry.x, self.data.geometry.y
+        return np.vstack([self.data.geometry.x, self.data.geometry.y]).T
 
     def __eq__(self, other):
         """Compare two _GpsBase objects"""
@@ -86,26 +91,27 @@ class _GpsBase(object):
         for i in self.data.iterrows():
             yield i
 
-    def __getattr__(self, col):
+    def __getattr__(self, attr):
         """Return the column as if it was an attribute"""
-        return getattr(self.data, col)
-        # if isinstance(col, str):
-        #     not_found = set([col]) - set(self.data.columns)
+        return getattr(self.data, attr)
+        # if isinstance(attr, str):
+        #     not_found = set([attr]) - set(self.data.columns)
         #     is_str = True
-        # elif isinstance(col, Iterable):
-        #     not_found = set(col) - set(self.data.columns)
+        # elif isinstance(attr, Iterable):
+        #     not_found = set(attr) - set(self.data.columns)
         #     is_str = False
         # else:
-        #     raise TypeError("The 'col' argument must be a string or a list of strings")
+        #     raise TypeError(
+        #         "The 'attr' argument must be a string or a list of strings")
 
         # if not_found:
         #     msg = "The attribute{} '{}' {} not found".format(
         #         "" if is_str else "s",
-        #         col,
+        #         attr,
         #         "was" if is_str else "were")
         #     raise ValueError(msg)
         # else:
-        #     return self.data[col]
+        #     return self.data[attr]
 
     def __len__(self):
         return len(self.data)
@@ -144,7 +150,8 @@ class _GpsBase(object):
         )
 
         # Normalize column names
-        gdf.rename(columns={x_col: "x", y_col: "y"}, inplace=True)
+        gdf.drop(columns=[x_col, y_col], inplace=True)
+        # gdf.rename(columns={x_col: "x", y_col: "y"}, inplace=True)
         if self._has_z:
             gdf.rename(columns={z_col: "z"}, inplace=True)
 
@@ -194,6 +201,25 @@ class _GpsBase(object):
         segments = self.data[["dt", "dist", "velocity"]].join(lines, how="right")
         return gpd.GeoDataFrame(segments, crs=self.crs, geometry="geometry")
 
+    def drop_from_mask(self, mask):
+        mask = mask.copy()
+
+        if isinstance(mask, pd.Series):
+            mask = gpd.GeoDataFrame(mask.to_frame("geometry"), crs=mask.crs)
+
+        # Project the mask if needed
+        if self.crs is not None:
+            mask = mask.to_crs(self.crs)
+
+        # Get the points included in masks
+        in_mask_pts = pd.Series(np.zeros(len(self)), dtype=bool)
+        for num, i in mask.iterrows():
+            in_mask_pts = in_mask_pts | (self.geometry.distance(i.geometry) <= i.radius)
+
+        # Drop points in mask
+        self.data.drop(in_mask_pts.loc[in_mask_pts].index, inplace=True)
+        self.data.reset_index(drop=True, inplace=True)
+
 
 class GpsPoints(_GpsBase):
     _has_time = True
@@ -205,6 +231,19 @@ def load_gps_points(path):
 
 class PoI(_GpsBase):
     _has_time = False
+    _has_z = False
+
+    def __init__(self, *args, **kwargs):
+        if len(args) >= 3:
+            keep_cols = args[3]
+        elif "keep_cols" in kwargs:
+            keep_cols = kwargs["keep_cols"]
+        else:
+            keep_cols = []
+            kwargs["keep_cols"] = keep_cols
+
+        keep_cols.extend(["radius"])
+        super().__init__(*args, **kwargs)
 
 
 def load_poi(path):
