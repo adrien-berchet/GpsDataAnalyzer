@@ -33,6 +33,9 @@ def compute_rest_time(gps_data, radius):
 
         current = data.loc[num]
 
+        # TODO: make a function for inf and sup parts since the only difference is the
+        # order of diff_not_one and the limits for label_inf_m1 and label_sup_p1
+
         # Inf part
         if len(diff_not_one[:pos_i]) > 0:
             diff_not_one[0] = True

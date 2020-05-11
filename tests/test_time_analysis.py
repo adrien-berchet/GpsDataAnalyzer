@@ -31,7 +31,7 @@ def test_rest_time_with_loops():
 
     assert np.equal(res[:5], range(5, 10)).all()
     assert res[5] == 20
-    assert np.equal(res[6: 11], range(18, 9, -2)).all()
-    assert np.equal(res[10: 15], range(10, 19, 2)).all()
+    assert np.equal(res[6:11], range(18, 9, -2)).all()
+    assert np.equal(res[10:15], range(10, 19, 2)).all()
     assert res[15] == 20
     assert np.equal(res[-5:], range(9, 4, -1)).all()

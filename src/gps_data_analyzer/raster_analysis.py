@@ -33,22 +33,42 @@ class Extent(object):
         for i in [self.xmin, self.xmax, self.ymin, self.ymax]:
             yield i
 
-    def mesh(self, mesh_size=None, x_size=None, y_size=None):
+    def mesh(self, mesh_size=None, x_size=None, y_size=None, nx=None, ny=None):
         # Check arguments
-        err_msg = "Either 'mesh_size' or both 'x_size' and 'y_size' must be not None"
-        if mesh_size is None:
-            if x_size is None or y_size is None:
-                raise ValueError(err_msg)
-        else:
-            if x_size is not None or y_size is not None:
-                raise ValueError(err_msg)
+        if nx is None and ny is None:
+            err_msg = (
+                "Either 'mesh_size' or both 'x_size' and 'y_size' must be not None"
+            )
+            if mesh_size is None:
+                if x_size is None or y_size is None:
+                    raise ValueError(err_msg)
             else:
+                if x_size is not None or y_size is not None:
+                    raise ValueError(err_msg)
+
                 x_size = y_size = mesh_size
 
+            if x_size <= 0 or y_size <= 0:
+                raise ValueError("The mesh size must be > 0")
+
+            nx = complex(0, int(np.round((self.xmax - self.xmin) / x_size)))
+            ny = complex(0, int(np.round((self.ymax - self.ymin) / y_size)))
+        else:
+            if nx is None or ny is None:
+                raise ValueError("Both 'nx' and 'ny' must be not None")
+            if mesh_size is not None or x_size is not None or y_size is not None:
+                raise ValueError(
+                    "Either both 'nx' and 'ny' OR 'mesh_size' OR both 'x_size' and "
+                    "'y_size' must be not None"
+                )
+            if nx <= 0 or ny <= 0:
+                raise ValueError("Both 'nx' and 'ny' must be > 0")
+
+            nx = complex(0, nx)
+            ny = complex(0, ny)
+
         # Generate mesh (use complex numbers to include the last value)
-        nx = complex(0, int(np.round((self.xmax - self.xmin) / x_size)))
-        ny = complex(0, int(np.round((self.ymax - self.ymin) / y_size)))
-        X, Y = np.mgrid[self.xmin: self.xmax: nx, self.ymin: self.ymax: ny]
+        X, Y = np.mgrid[self.xmin : self.xmax : nx, self.ymin : self.ymax : ny]
 
         return X, Y
 
@@ -134,12 +154,20 @@ def heatmap(
     mesh_size=None,
     x_size=None,
     y_size=None,
+    nx=None,
+    ny=None,
     border=0,
     kernel_size=None,
     kernel_cut=4.0,
     weight_col=None,
     normalize=True,
 ):
+    # Check arguments
+    if kernel_size is not None and kernel_size <= 0:
+        raise ValueError("The 'kernel_size' argument must be > 0")
+    if kernel_cut is not None and kernel_cut <= 0:
+        raise ValueError("The 'kernel_cut' argument must be > 0")
+
     # Get coordinates
     x = gps_data.x
     y = gps_data.y
@@ -156,7 +184,7 @@ def heatmap(
     extent = Extent(xmin, xmax, ymin, ymax, border)
 
     # Generate mesh
-    X, Y = extent.mesh(mesh_size=mesh_size, x_size=x_size, y_size=y_size)
+    X, Y = extent.mesh(mesh_size=mesh_size, x_size=x_size, y_size=y_size, nx=nx, ny=ny)
     positions = np.vstack([X.ravel(), Y.ravel()])
 
     # Compute KDTree
@@ -164,10 +192,22 @@ def heatmap(
 
     # Init sigma if not given
     if kernel_size is None:
-        kernel_size = 2.0 * mesh_size
+        if X.size >= 4:
+            dx = X[1, 0] - X[0, 0]
+        else:
+            dx = 0
+        if Y.size >= 4:
+            dy = Y[0, 1] - Y[0, 0]
+        else:
+            dy = 0
+        mesh_size = max(dx, dy)
+        if mesh_size > 0:
+            kernel_size = 2.0 * mesh_size
+        else:
+            kernel_size = 1
 
     kde = np.zeros(len(tree.data))
-    for num, _x, _y, _w in zip(x, y, weight):  # TODO: optimize this loop
+    for num, (_x, _y, _w) in enumerate(zip(x, y, weight)):  # TODO: optimize this loop
         # Get the closest points of the current point
         coords_i = [_x, _y]
         in_radius_pts = tree.query_ball_point(coords_i, kernel_cut * kernel_size)
