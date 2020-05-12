@@ -1,46 +1,12 @@
+import os
 import pytest
 
-import pandas as pd
-
-import gps_data_analyzer as gda
-
-
-@pytest.fixture
-def simple_gps_raw_data():
-    x = [0, 0.1, 0.2]
-    y = [1.0, 1.1, 1.2]
-    z = [0, 100, 200]
-    t = ["2019/06/16-09:55:34", "2019/06/16-09:55:57", "2019/06/16-09:58:12"]
-    return x, y, z, t
+from .fixtures.gps_points import *  # noqa
+from .fixtures.poi_points import *  # noqa
 
 
 @pytest.fixture
-def simple_gps_df(simple_gps_raw_data):
-    x, y, z, t = simple_gps_raw_data
-    df = pd.DataFrame({"x": x, "y": y, "z": z, "t": t})
-    return df
-
-
-@pytest.fixture
-def simple_gps_data(simple_gps_df):
-    return gda.GpsPoints(simple_gps_df, x_col="x", y_col="y", z_col="z", time_col="t")
-
-
-@pytest.fixture
-def simple_poi_raw_data():
-    x = [0.5]
-    y = [0.5]
-    r = [0.75]
-    return x, y, r
-
-
-@pytest.fixture
-def simple_poi_df(simple_poi_raw_data):
-    x, y, r = simple_poi_raw_data
-    df = pd.DataFrame({"x": x, "y": y, "radius": r})
-    return df
-
-
-@pytest.fixture
-def simple_poi_data(simple_poi_df):
-    return gda.PoI(simple_poi_df, x_col="x", y_col="y")
+def gpkg_filepath(tmpdir):
+    tmpdir_str = tmpdir.strpath
+    filename = "test.gpkg"
+    return os.path.join(tmpdir_str, filename)

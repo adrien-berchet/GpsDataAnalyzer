@@ -1,65 +1,29 @@
-import os
-import tempfile
-import zipfile
-
 import pandas as pd
 import geopandas as gpd
 
 
-def save(obj, path):
-    # Create directory if it does not exist
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+def save(obj, path, mode="w", **kwargs):
+    tmp = obj.data.copy()
 
-    # Create a temporary directory
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        tmp = obj.data.copy()
+    # Convert datetime to string
+    if obj._has_time:
+        tmp["datetime"] = tmp["datetime"].apply(pd.Timestamp.isoformat)
 
-        # Convert datetime to string
-        if obj._has_time:
-            tmp["datetime"] = tmp["datetime"].apply(pd.Timestamp.isoformat)
+    # Save to GeoJSON
+    tmp.to_file(path, driver="GPKG", encoding="utf-8")
 
-        # Save to GeoJSON
-        data_file = os.path.join(tmpdirname, "data.geojson")
-        tmp.to_file(data_file, driver="GeoJSON", encoding="utf-8")
-
-        # Save metadata
-        # metadata = {
-        #     "local_crs": self.local_crs,
-        #     "x_col": self.x_col,
-        #     "y_col": self.y_col,
-        # }
-        # metadata_file = os.path.join(tmpdirname, "metadata.json")
-        # with open(metadata_file, mode="w") as f:
-        #     json.dump(metadata, f)
-
-        # Zip the files to the destination
-        zip_file = zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED)
-        with zip_file:
-            zip_file.write(data_file, arcname=os.path.basename(data_file))
-            # zip_file.write(metadata_file, arcname=os.path.basename(metadata_file))
+    # TODO: Fiona>=0.19 will be able to store metadata in GPKG files. It would be nice
+    # to store the data type in metadata so the load() function can now which class it
+    # should call.
 
 
-def load(path):
-    # Create a temporary directory
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        # Extract the Zip file
-        zip_file = zipfile.ZipFile(path, "r", compression=zipfile.ZIP_DEFLATED)
-        zip_file.extractall(path=tmpdirname)
+def _load(path):
+    # Load data
+    data = gpd.read_file(path, driver="GPKG")
 
-        # Load data
-        data = gpd.read_file(os.path.join(tmpdirname, "data.geojson"), driver="GeoJSON")
-
-        # Convert time columns
-        if "datetime" in data.columns:
-            data["datetime"] = pd.to_datetime(data["datetime"])
-            # data["duration"] = data["duration_s"].apply(
-            #     pd.Timedelta, args=["S"])
-
-        # Load metadata
-        # with open(os.path.join(tmpdirname, "metadata.json"), mode="r") as f:
-        #     metadata = json.load(f)
-
-        # local_crs = metadata.get("local_crs", None)
+    # Convert time columns
+    if "datetime" in data.columns:
+        data["datetime"] = pd.to_datetime(data["datetime"])
 
     # If everything could be imported properly, the new object is returned
     return data

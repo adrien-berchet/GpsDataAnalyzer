@@ -18,10 +18,10 @@ class _GpsBase(object):
     """Class to store GpsData"""
 
     _default_input_crs = 4326
-    _default_x_col = "lon"
-    _default_y_col = "lat"
-    _default_z_col = "alt"
-    _default_time_col = "time"
+    _default_x_col = "x"
+    _default_y_col = "y"
+    _default_z_col = "z"
+    _default_time_col = "datetime"
     _has_z = True
     _has_time = False
 
@@ -45,17 +45,22 @@ class _GpsBase(object):
         z_col = z_col if z_col is not None else self._default_z_col
         time_col = time_col if time_col is not None else self._default_time_col
 
-        if not isinstance(df, gpd.GeoDataFrame):
-            self._format_data(
-                df,
-                input_crs,
-                local_crs,
-                x_col,
-                y_col,
-                z_col,
-                time_col,
-                keep_cols=keep_cols,
-            )
+        # Format data
+        gdf = self._format_data(
+            df,
+            input_crs,
+            local_crs,
+            x_col,
+            y_col,
+            z_col,
+            time_col,
+            keep_cols=keep_cols,
+        )
+
+        # Save data
+        self.data = gdf
+        self.crs = self.data.crs
+
         if self._has_time:
             self._normalize_data()
 
@@ -127,44 +132,45 @@ class _GpsBase(object):
         time_col=None,
         keep_cols=None,
     ):
+        df = df.copy()
+
         # Convert time and sort by time
         if self._has_time:
-            df = df.copy()
-            df["datetime"] = _convert_time(df[time_col], format=self.datetime_format)
+            t_col = df[time_col]
+            if not np.issubdtype(df[time_col].dtype, np.datetime64):
+                t_col = _convert_time(df[time_col], format=self.datetime_format)
+            df["datetime"] = t_col
             df.sort_values("datetime", inplace=True)
 
+        if not isinstance(df, gpd.GeoDataFrame):
+            # Drop missing coordinates
+            df.dropna(subset=[x_col, y_col], inplace=True)
+
+            # Convert to GeoDataFrame
+            df = gpd.GeoDataFrame(
+                df, crs=input_crs, geometry=gpd.points_from_xy(df[x_col], df[y_col])
+            )
+
         # Drop useless columns
-        cols = [x_col, y_col]
+        cols = ["geometry"]
         if self._has_z:
             cols.append(z_col)
         if self._has_time:
             cols.append("datetime")
-        df = df[cols + ([] if keep_cols is None else keep_cols)].copy()
-
-        # Drop missing coordinates
-        df.dropna(subset=cols, inplace=True)
-
-        # Convert to GeoDataFrame
-        gdf = gpd.GeoDataFrame(
-            df, crs=input_crs, geometry=gpd.points_from_xy(df[x_col], df[y_col])
-        )
+        df = df[cols + ([] if keep_cols is None else keep_cols)]
 
         # Normalize column names
-        gdf.drop(columns=[x_col, y_col], inplace=True)
-        # gdf.rename(columns={x_col: "x", y_col: "y"}, inplace=True)
         if self._has_z:
-            gdf.rename(columns={z_col: "z"}, inplace=True)
+            df.rename(columns={z_col: "z"}, inplace=True)
 
         # Reset index
-        gdf.reset_index(drop=True, inplace=True)
+        df.reset_index(drop=True, inplace=True)
 
         # Project data
         if local_crs is not None and local_crs != input_crs:
-            gdf.to_crs(local_crs, inplace=True)
+            df.to_crs(local_crs, inplace=True)
 
-        # Save data
-        self.data = gdf
-        self.crs = gdf.crs
+        return df
 
     def _normalize_data(self):
         # Conpute time delta between consecutive points (in s)
@@ -230,10 +236,10 @@ class GpsPoints(_GpsBase):
 
 
 def load_gps_points(path):
-    return GpsPoints(io.load(path))
+    return GpsPoints(io._load(path))
 
 
-class PoI(_GpsBase):
+class PoiPoints(_GpsBase):
     """
     Class to wrap a geopandas.GeoDataFrame and format it in order to store Point of
     Interest points
@@ -254,5 +260,5 @@ class PoI(_GpsBase):
         super().__init__(*args, **kwargs)
 
 
-def load_poi(path):
-    return PoI(io.load(path))
+def load_poi_points(path):
+    return PoiPoints(io._load(path))

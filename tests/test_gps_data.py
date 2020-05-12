@@ -60,7 +60,7 @@ def test_poi(simple_poi_data, simple_poi_raw_data):
 
 def test_poi_fail(simple_poi_df):
     with pytest.raises(KeyError):
-        gda.PoI(simple_poi_df.drop(columns=["radius"]), x_col="x", y_col="y")
+        gda.PoiPoints(simple_poi_df.drop(columns=["radius"]), x_col="x", y_col="y")
 
 
 def test_mask(simple_poi_data, simple_gps_data):
