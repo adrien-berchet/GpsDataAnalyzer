@@ -12,18 +12,65 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
+  # This workflow runs the tests
+  tests:
+
+    # Setup test matrix
+    strategy:
+      matrix:
+        python-version: [3.6]
+
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+
+    # Setup Conda
+    - uses: goanpeca/setup-miniconda@v1
+      with:
+        channels: conda-forge
+        python-version: ${{ matrix.python-version }}
+
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
 
-    # Runs a single command using the runners shell
-    - name: Run the tests
+    # Setup Python
+    - uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    # Cache dependencies
+    - name: Cache pip
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/pip # This path is specific to Ubuntu
+        # Look to see if there is a cache hit for the corresponding requirements file
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements-test.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          ${{ runner.os }}-
+
+    # Install dependencies
+    - name: Install dependencies
       run: |
-        pip install tox toc-conda
-        tox
+        python -m pip install --upgrade pip
+        pip install tox
+
+    # Runs the test
+    - name: Run the tests
+      run: tox -e py36
+
+    # Runs style
+    - name: Check style
+      run: tox -e style
+
+    # Runs coverage
+    - name: Check coverage
+      run: tox -e coverage
+
+    # Store coverage results
+    - name: Upload reports
+      uses: actions/upload-artifact@v1
+      with:
+        name: reports
+        path: reports

@@ -1,0 +1,10 @@
+coverage
+flake8
+flake8-html
+pytest
+pytest-benchmark
+pytest-cov
+pytest-html
+pytest-mpl
+tox
+tox-conda
