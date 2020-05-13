@@ -77,8 +77,8 @@ def test_plot_background(simple_gps_data, background):
 @pytest.mark.mpl_image_compare
 def test_plot_segments(simple_gps_data):
     # Plot segments
-    fig, ax = gda.plot_utils.plot(
-        simple_gps_data.segments(),
+    fig, ax = gda.plot_utils.plot_segments(
+        simple_gps_data,
         var="velocity",
         show=False
     )
@@ -109,6 +109,23 @@ def test_plot_heatmap(simple_gps_data):
 
     # Plot raster
     fig, ax = raster.plot(show=False)
+
+    # Add track markers
+    x = simple_gps_data.x
+    y = simple_gps_data.y
+    ax.plot(x, y, "k.", markersize=10, transform=ax.projection, zorder=15)
+
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_plot_heatmap_annotations(simple_gps_data, simple_poi_data):
+    # Define raster
+    raster = gda.raster_analysis.heatmap(
+        simple_gps_data, weight_col="z", nx=15, ny=15, border=0.05)
+
+    # Plot raster and annotations
+    fig, ax = raster.plot(show=False, annotations=simple_poi_data)
 
     # Add track markers
     x = simple_gps_data.x

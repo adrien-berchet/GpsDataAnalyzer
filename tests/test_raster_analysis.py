@@ -28,6 +28,34 @@ _res_values = [
 ]
 
 
+def test_extent():
+    extent = gda.raster_analysis.Extent(0, 1, 2, 3)
+
+    assert extent.xmin == extent[0] == 0
+    assert extent.xmax == extent[1] == 1
+    assert extent.ymin == extent[2] == 2
+    assert extent.ymax == extent[3] == 3
+    assert [i for i in extent] == [0, 1, 2, 3]
+
+
+def test_extent_border():
+    extent = gda.raster_analysis.Extent(0, 1, 2, 3, 0.1)
+
+    assert extent.inner_xmin == 0
+    assert extent.inner_xmax == 1
+    assert extent.inner_ymin == 2
+    assert extent.inner_ymax == 3
+    assert [i for i in extent] == [-0.1, 1.1, 1.9, 3.1]
+
+    extent.reset_border(0.2)
+
+    assert extent.inner_xmin == 0
+    assert extent.inner_xmax == 1
+    assert extent.inner_ymin == 2
+    assert extent.inner_ymax == 3
+    assert [i for i in extent] == [-0.2, 1.2, 1.8, 3.2]
+
+
 def test_simple_heatmap(simple_gps_data):
     res = gda.raster_analysis.heatmap(simple_gps_data, mesh_size=0.1)
 
@@ -70,6 +98,9 @@ def test_heatmap_args(simple_gps_data):
         gda.raster_analysis.heatmap(simple_gps_data, mesh_size=1, nx=1, ny=1)
 
     with pytest.raises(ValueError):
+        gda.raster_analysis.heatmap(simple_gps_data, mesh_size=1, x_size=1)
+
+    with pytest.raises(ValueError):
         gda.raster_analysis.heatmap(simple_gps_data, x_size=1, nx=1, ny=1)
 
     with pytest.raises(ValueError):
@@ -98,3 +129,9 @@ def test_heatmap_args(simple_gps_data):
 
     with pytest.raises(ValueError):
         gda.raster_analysis.heatmap(simple_gps_data, nx=1, ny=-1)
+
+    with pytest.raises(ValueError):
+        gda.raster_analysis.heatmap(simple_gps_data, kernel_size=-1)
+
+    with pytest.raises(ValueError):
+        gda.raster_analysis.heatmap(simple_gps_data, kernel_cut=-1)

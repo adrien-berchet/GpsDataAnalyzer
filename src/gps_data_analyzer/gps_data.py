@@ -25,6 +25,7 @@ class _GpsBase(object):
     _default_time_col = "datetime"
     _has_z = True
     _has_time = False
+    _use_haversine = True
 
     datetime_format = DEFAULT_TIME_FORMAT
 
@@ -38,7 +39,6 @@ class _GpsBase(object):
         y_col=None,
         z_col=None,
         time_col=None,
-        use_haversine=True,
     ):
         input_crs = input_crs if input_crs is not None else self._default_input_crs
         local_crs = local_crs if local_crs is not None else input_crs
@@ -63,7 +63,6 @@ class _GpsBase(object):
         self.data = gdf
         self.crs = self.data.crs
 
-        self.use_haversine = use_haversine
         if self._has_time:
             self._normalize_data()
 
@@ -92,7 +91,7 @@ class _GpsBase(object):
         assert isinstance(other, _GpsBase), (
             "The operator == is only defined for " "'_GpsBase' objects."
         )
-        return self.data.equals(other._data)
+        return self.data.equals(other.data)
 
     def __iter__(self):
         """Return an generator over the rows of the internal geopandas.GeoDataFrame"""
@@ -165,7 +164,7 @@ class _GpsBase(object):
 
         # Conpute distance between consecutive points (in m)
         shifted = self.data.geometry.shift()
-        if self.crs.to_epsg() == 4326 and self.use_haversine:
+        if self.crs.to_epsg() == 4326 and self._use_haversine:
             self.data["dist"] = haversine(self.y, self.x, shifted.y, shifted.x)
         else:
             self.data["dist"] = self.data.distance(shifted)

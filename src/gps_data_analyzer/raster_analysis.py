@@ -10,7 +10,7 @@ from .plot_utils import setup_axis
 class Extent(object):
     """docstring for Extent"""
 
-    def __init__(self, xmin, xmax, ymin, ymax, border):
+    def __init__(self, xmin, xmax, ymin, ymax, border=0):
         self.border = border
         self.inner_xmin = xmin
         self.inner_xmax = xmax
@@ -129,7 +129,7 @@ class Raster(object):
             add_annotated_points(ax, annotations, **annotation_kwargs)
 
         if show is True:
-            plt.show()
+            plt.show()  # pragma: no cover
         else:
             return fig, ax
 

@@ -15,6 +15,12 @@ def test_create_track(simple_gps_data, simple_gps_raw_data):
     assert simple_gps_data.t.tolist() == [pd.to_datetime(i) for i in t]
 
 
+def test_equal_track(simple_gps_data):
+    new = gda.GpsPoints(simple_gps_data.data)
+
+    assert new == simple_gps_data
+
+
 def test_create_track_sort(simple_gps_df, simple_gps_raw_data):
     x, y, z, t = simple_gps_raw_data
 
@@ -59,6 +65,19 @@ def test_create_track_proj(simple_gps_df, simple_gps_raw_data):
     assert np.allclose(
         res.velocity.values, [np.nan, 900.343, 153.201], equal_nan=True
     )
+
+
+def test_add_attribute(simple_gps_data):
+    new_attr = simple_gps_data.x * 2
+    new_attr.rename("two_x", inplace=True)
+    simple_gps_data.add_attribute(new_attr)
+    assert (simple_gps_data.two_x.tolist() == (simple_gps_data.x * 2)).all()
+
+
+def test_add_attribute_name(simple_gps_data):
+    new_attr = simple_gps_data.x * 2
+    simple_gps_data.add_attribute(new_attr, name="two_x")
+    assert (simple_gps_data.two_x.tolist() == (simple_gps_data.x * 2)).all()
 
 
 def test_poi(simple_poi_data, simple_poi_raw_data):

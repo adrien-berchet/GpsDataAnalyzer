@@ -91,7 +91,7 @@ def setup_axis(
 
     # Create a terrain background instance
     if background is True:
-        background = cimgt.GoogleTiles(style="satellite")
+        background = cimgt.GoogleTiles(style="satellite")  # pragma: no cover
 
     # Add the background data
     if background is not False:
@@ -148,7 +148,7 @@ def plot(
 
     # Show the figure
     if show is True:
-        plt.show()
+        plt.show()  # pragma: no cover
     else:
         return fig, ax
 
@@ -157,4 +157,4 @@ def plot_segments(gps_data, *args, **kwargs):
     """Plot segments with background and annotations"""
     segments = gps_data.segments()
 
-    return plot(segments)
+    return plot(segments, *args, **kwargs)
