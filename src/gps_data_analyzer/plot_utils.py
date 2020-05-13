@@ -6,8 +6,7 @@ import numpy as np
 
 
 def create_transparent_cmap(name="rainbow"):
-    """
-    Create a matplotlib.colors.ListedColormap with transparency for the lowest
+    """Create a ``matplotlib.colors.ListedColormap`` with transparency for the lowest
     value.
     """
     default_cmap = plt.get_cmap(name)
@@ -17,18 +16,25 @@ def create_transparent_cmap(name="rainbow"):
 
 
 def add_annotated_points(ax, points, **kwargs):
-    """
-    Add annotated points to the given axis.
-    The 'points' object must be a pandas.DataFrame with the following columns:
-        * x
-        * y
-        * name - Optional: labels are taken if not provided
-        * horizontalalignment (or ha) - Optional: the default value is 'center'
-        * verticalalignment (or va) - Optional: the default value is 'center'
-        * fontsize - Optional: the default value is 12
-        * x_offset - Optional: the default value is 0
-        * y_offset - Optional: the default value is 0
-    The given kwargs will be passed to the ``matplotlib.pyplot.annotate()`` function.
+    """Add annotated points to the given axis.
+
+    Args:
+        ax: The axis to update.
+        points: The points to add to the axis.
+        kwargs: The given kwargs will be passed to the ``matplotlib.pyplot.annotate()``
+            function.
+
+    Note:
+        The `points` object must be a ``pandas.DataFrame`` with the following columns:
+
+            * x
+            * y
+            * name (optional): labels are taken if not provided
+            * horizontalalignment (or ha) (optional): the default value is 'center'
+            * verticalalignment (or va) (optional): the default value is 'center'
+            * fontsize (optional): the default value is 12
+            * x_offset (optional): the default value is 0
+            * y_offset (optional): the default value is 0
     """
 
     pts = points.copy()

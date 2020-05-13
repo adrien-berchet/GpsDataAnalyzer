@@ -97,9 +97,10 @@ def test_mask(simple_poi_data, simple_gps_data):
     assert len(simple_gps_data) == 3
 
     # Drop from masks
-    simple_gps_data.drop_from_mask(simple_poi_data)
+    N = simple_gps_data.drop_from_mask(simple_poi_data)
 
     # Check results
+    assert N == 2
     assert len(simple_gps_data) == 1
     assert np.equal(simple_gps_data.xy, [[0, 1]]).all()
     assert simple_gps_data.index == pd.core.indexes.range.RangeIndex(0, 1, 1)
@@ -114,9 +115,27 @@ def test_mask_polygon(simple_poi_data, simple_gps_data):
     polygons.crs = simple_poi_data.crs
 
     # Drop from masks
-    simple_gps_data.drop_from_mask(polygons)
+    N = simple_gps_data.drop_from_mask(polygons)
 
     # Check results
+    assert N == 2
+    assert len(simple_gps_data) == 1
+    assert np.equal(simple_gps_data.xy, [[0, 1]]).all()
+    assert simple_gps_data.index == pd.core.indexes.range.RangeIndex(0, 1, 1)
+
+
+def test_mask_polygon_no_radius(simple_poi_data, simple_gps_data):
+    assert len(simple_gps_data) == 3
+
+    # Create small polygons aroung PoI points
+    polygons = simple_poi_data.buffer(0.1).to_frame("geometry")
+    polygons.crs = simple_poi_data.crs
+
+    # Drop from masks
+    N = simple_gps_data.drop_from_mask(polygons)
+
+    # Check results
+    assert N == 2
     assert len(simple_gps_data) == 1
     assert np.equal(simple_gps_data.xy, [[0, 1]]).all()
     assert simple_gps_data.index == pd.core.indexes.range.RangeIndex(0, 1, 1)

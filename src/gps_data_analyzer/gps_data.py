@@ -11,12 +11,41 @@ DEFAULT_TIME_FORMAT = "%Y/%m/%d-%H:%M:%S"
 
 
 def _convert_time(series, format=DEFAULT_TIME_FORMAT):
-    # Convert time
+    """Convert a ``pandas.Series`` containing timestamps as strings.
+
+    Args:
+        series (pandas.Series): The timestamps given as strings.
+        format (str, optional): The format used for conversion.
+
+    Returns:
+        ``pandas.Series``: The timestamps converted in ``pandas.datetime``.
+    """
     return pd.to_datetime(series, format=format)
 
 
 class _GpsBase(object):
-    """Class to store GpsData"""
+    """Class to wrap a ``geopandas.GeoDataFrame`` and format it in order to store GPS
+    points.
+
+    Attributes:
+        _default_input_crs (int): The default EPSG code of input data (only used when
+            ``input_crs`` is ``None``).
+        _default_x_col (str): The default column name of input data that contains X
+            coordinates (only used when ``x_col`` is ``None``).
+        _default_y_col (str): The default column name of input data that contains Y
+            coordinates (only used when ``y_col`` is ``None``).
+        _default_z_col (str): The default column name of input data that contains Z
+            coordinates (only used when ``z_col`` is ``None`` and ``_has_z`` is
+            ``True``).
+        _default_time_col (str): The default column name of input data that contains
+            timestamps (only used when ``time_col`` is ``None`` and ``_has_time`` is
+            ``True``).
+        _has_z (bool): Indicate whether the Z coordinate must be considered or not.
+        _has_time (bool): Indicate whether the timestamps must be considered or not.
+        _use_haversine (bool): Indicate whether the distance computations must use the
+            Haversine formula or not.
+        datetime_format (str): The format used to convert strings into timestamps.
+    """
 
     _default_input_crs = 4326
     _default_x_col = "x"
@@ -68,14 +97,22 @@ class _GpsBase(object):
 
     @property
     def x(self):
+        """pandas.Series: Get X coordinates from the geometry."""
         return self.data.geometry.x
 
     @property
     def y(self):
+        """pandas.Series: Get Y coordinates from the geometry."""
         return self.data.geometry.y
 
     @property
     def t(self):
+        """Get timestamps if :py:attr:`~_has_time` is ``True`` or the `t` column
+        otherwise.
+
+        Returns:
+            pandas.Series: Timestamps.
+        """
         if self._has_time:
             attr = "datetime"
         else:
@@ -84,25 +121,28 @@ class _GpsBase(object):
 
     @property
     def xy(self):
+        """np.array: Array with a (x,y) couple of each point."""
         return np.vstack([self.data.geometry.x, self.data.geometry.y]).T
 
     def __eq__(self, other):
-        """Compare two _GpsBase objects"""
+        """Compare two :py:obj:`~_GpsBase` objects"""
         assert isinstance(other, _GpsBase), (
             "The operator == is only defined for " "'_GpsBase' objects."
         )
         return self.data.equals(other.data)
 
     def __iter__(self):
-        """Return an generator over the rows of the internal geopandas.GeoDataFrame"""
+        """Return a generator over the rows of the internal
+        ``geopandas.GeoDataFrame``"""
         for i in self.data.iterrows():
             yield i
 
     def __getattr__(self, attr):
-        """Return the column as if it was an attribute"""
+        """Apply any unknown attribute to the internal ``geopandas.GeoDataFrame``."""
         return getattr(self.data, attr)
 
     def __len__(self):
+        """int: the length of the internal ``geopandas.GeoDataFrame``."""
         return len(self.data)
 
     def _format_data(
@@ -116,6 +156,28 @@ class _GpsBase(object):
         time_col=None,
         keep_cols=None,
     ):
+        """Format a ``pandas.DataFrame`` or ``geopandas.GeoDataFrame``.
+
+        Args:
+            df (pandas.DataFrame or geopandas.GeoDataFrame): The object to format.
+            input_crs (int): The EPSG code of the input data.
+            local_crs (int or None): The EPSG code of the local projection to which the
+                data will be transformed.
+            x_col (str): The name of the column containing X or lon coordinates.
+            y_col (str): The name of the column containing Y or lat coordinates.
+            z_col (str, optional): The name of the column containing Z coordinates.
+            time_col (str, optional): The name of the column containing timestamps.
+            keep_cols (:obj:`list` of :obj:`str`, optional): The names of the columns
+                that should be kept (all others will be discarded).
+
+        Note:
+            The column containing timestamps can be either in string format (and should
+            thus follow the format given by :py:attr:`~datetime_format`) or in a subtype
+            of ``numpy.datetime64``.
+
+        Returns:
+            ``geopandas.GeoDataFrame``: The formatted data.
+        """
         df = df.copy()
 
         # Convert time and sort by time
@@ -157,7 +219,7 @@ class _GpsBase(object):
         return df
 
     def _normalize_data(self):
-        # Conpute time delta between consecutive points (in s)
+        """Conpute time delta between consecutive points (in s)."""
         self.data["dt"] = (
             self.data["datetime"] - self.data["datetime"].shift()
         ).values / pd.Timedelta(1, "s")
@@ -173,6 +235,17 @@ class _GpsBase(object):
         self.data["velocity"] = self.data["dist"] / self.data["dt"]
 
     def add_attribute(self, attr, name=None):
+        """Add a column to the internal ``geopandas.GeoDataFrame``.
+
+        Args:
+            attr (pandas.Series): The column to add.
+            name (str, optional): The name of the new attribute. If not provided, the
+                name of the ``pandas.Series`` is used.
+
+        Note:
+            The labels of the given ``pandas.Series`` must be the same as the ones of
+            the internal ``geopandas.GeoDataFrame``.
+        """
         assert isinstance(attr, pd.Series), (
             "The 'attr' argument must be a" "pandas.Series"
         )
@@ -182,7 +255,12 @@ class _GpsBase(object):
             self.data[attr.name] = attr
 
     def segments(self):
-        """Build segments from the consecutive points"""
+        """Build segments from the consecutive points.
+
+        Returns:
+            ``geopandas.GeoDataFrame``: A ``geopandas.GeoDataFrame`` containing the
+            segments.
+        """
         tmp = (
             self.data[["geometry"]]
             .join(self.data[["geometry"]].shift(), rsuffix="_m1")
@@ -196,6 +274,20 @@ class _GpsBase(object):
         return gpd.GeoDataFrame(segments, crs=self.crs, geometry="geometry")
 
     def drop_from_mask(self, mask):
+        """Drop points contained in the given mask.
+
+        Args:
+            mask (:obj:`geopandas.GeoDataFrame`): The mask used to drop internal points.
+
+        Note:
+            * The mask must be a :py:obj:`_GpsBase` or ``geopandas.GeoDataFrame``
+              object.
+            * If the mask has a `radius` column, it will be used and drop all points at
+              a distance smaller than the `radius` values.
+
+        Returns:
+            int: The number of dropped points.
+        """
         mask = mask.copy()
 
         if isinstance(mask, pd.Series):
@@ -208,32 +300,41 @@ class _GpsBase(object):
         # Get the points included in masks
         in_mask_pts = pd.Series(np.zeros(len(self)), dtype=bool)
         for num, i in mask.iterrows():
-            in_mask_pts = in_mask_pts | (self.geometry.distance(i.geometry) <= i.radius)
+            in_mask_pts = in_mask_pts | (
+                self.geometry.distance(i.geometry) <= i.get("radius", 0))
+
+        # Count the number of points that are going to be dropped
+        N = in_mask_pts.sum()
 
         # Drop points in mask
         self.data.drop(in_mask_pts.loc[in_mask_pts].index, inplace=True)
         self.data.reset_index(drop=True, inplace=True)
 
+        return N
+
 
 class GpsPoints(_GpsBase):
-    """
-    Class to wrap a geopandas.GeoDataFrame and format it in order to store GPS
-    points
-    """
+    """Class to store GPS points with Z coordinates and timestamps."""
+    _has_z = True
     _has_time = True
 
 
 def load_gps_points(path):
+    """Load :py:obj:`GpsPoints` from a file.
+
+    Args:
+        path (str): The path to the file.
+
+    Returns:
+        :py:obj:`GpsPoints`: The data loaded.
+    """
     return GpsPoints(io._load(path))
 
 
 class PoiPoints(_GpsBase):
-    """
-    Class to wrap a geopandas.GeoDataFrame and format it in order to store Point of
-    Interest points
-    """
-    _has_time = False
+    """Class to store PoI points with only X and Y coordinates."""
     _has_z = False
+    _has_time = False
 
     def __init__(self, *args, **kwargs):
         if len(args) >= 3:
@@ -249,4 +350,12 @@ class PoiPoints(_GpsBase):
 
 
 def load_poi_points(path):
+    """Load :py:obj:`PoiPoints` from a file.
+
+    Args:
+        path (str): The path to the file.
+
+    Returns:
+        :py:obj:`PoiPoints`: The data loaded.
+    """
     return PoiPoints(io._load(path))
