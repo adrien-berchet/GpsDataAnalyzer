@@ -157,7 +157,7 @@ def heatmap(
     x = gps_data.x
     y = gps_data.y
     if weight_col is not None:
-        weight = gps_data.weight_col.values
+        weight = getattr(gps_data, weight_col).values
     else:
         weight = np.ones(len(gps_data))
 
@@ -214,7 +214,7 @@ def heatmap(
         kde -= kde.min()
         kde /= kde.max()
 
-        # Reshape the result
-    heatmap = np.reshape(kde, X.shape)
+    # Reshape and rotate the result
+    heatmap = np.rot90(np.reshape(kde, X.shape))
 
     return Raster(X, Y, heatmap, extent)

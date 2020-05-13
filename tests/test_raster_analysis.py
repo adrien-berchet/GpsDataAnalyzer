@@ -20,11 +20,11 @@ _res_Y = [
     [0.85, 0.975, 1.1, 1.225, 1.35],
 ]
 _res_values = [
-    [0.14622, 0.333906, 0.353963, 0.190739, 0.0],
-    [0.333906, 0.685123, 0.787424, 0.544946, 0.190739],
-    [0.353963, 0.787424, 1.0, 0.787424, 0.353963],
-    [0.190739, 0.544946, 0.787424, 0.685123, 0.333906],
     [0.0, 0.190739, 0.353963, 0.333906, 0.14622],
+    [0.190739, 0.544946, 0.787424, 0.685123, 0.333906],
+    [0.353963, 0.787424, 1.0, 0.787424, 0.353963],
+    [0.333906, 0.685123, 0.787424, 0.544946, 0.190739],
+    [0.14622, 0.333906, 0.353963, 0.190739, 0.0],
 ]
 
 
@@ -33,7 +33,7 @@ def test_simple_heatmap(simple_gps_data):
 
     assert np.equal(res.X, [[0, 0], [0.2, 0.2]]).all()
     assert np.equal(res.Y, [[1, 1.2], [1, 1.2]]).all()
-    assert np.allclose(res.values, [[1, 0], [0, 1]])
+    assert np.allclose(res.values, [[0, 1], [1, 0]])
 
 
 def test_heatmap_no_normalization(simple_gps_data):
@@ -41,7 +41,7 @@ def test_heatmap_no_normalization(simple_gps_data):
 
     assert np.equal(res.X, [[0, 0], [0.2, 0.2]]).all()
     assert np.equal(res.Y, [[1, 1.2], [1, 1.2]]).all()
-    assert np.allclose(res.values, [[3.103057, 3.042058], [3.042058, 3.103057]])
+    assert np.allclose(res.values, [[3.042058, 3.103057], [3.103057, 3.042058]])
 
 
 def test_heatmap_border(simple_gps_data):

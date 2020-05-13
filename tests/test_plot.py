@@ -99,3 +99,20 @@ def test_plot_raster(simple_gps_data):
     fig, _ = raster.plot(show=False)
 
     return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_plot_heatmap(simple_gps_data):
+    # Define raster
+    raster = gda.raster_analysis.heatmap(
+        simple_gps_data, weight_col="z", nx=15, ny=15, border=0.05)
+
+    # Plot raster
+    fig, ax = raster.plot(show=False)
+
+    # Add track markers
+    x = simple_gps_data.x
+    y = simple_gps_data.y
+    ax.plot(x, y, "k.", markersize=10, transform=ax.projection, zorder=15)
+
+    return fig
