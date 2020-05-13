@@ -7,9 +7,9 @@ import gps_data_analyzer as gda
 
 @pytest.fixture
 def simple_poi_raw_data():
-    x = [0.5]
-    y = [0.5]
-    r = [0.75]
+    x = [0.15]
+    y = [1.15]
+    r = [0.1]
     return x, y, r
 
 

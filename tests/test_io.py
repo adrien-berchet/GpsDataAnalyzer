@@ -18,9 +18,9 @@ def test_save_load_gps_points(simple_gps_raw_data, simple_gps_data, gpkg_filepat
     assert res.z.tolist() == z
     assert res.datetime.tolist() == [pd.to_datetime(i) for i in t]
     assert np.allclose(res.dt.values, [np.nan, 23.0, 135.0], equal_nan=True)
-    assert np.allclose(res.dist.values, [np.nan, 0.141421, 0.141421], equal_nan=True)
+    assert np.allclose(res.dist.values, [np.nan, 15724.02, 15723.75], equal_nan=True)
     assert np.allclose(
-        res.velocity.values, [np.nan, 0.00614875, 0.00104757], equal_nan=True
+        res.velocity.values, [np.nan, 683.6529, 116.4722], equal_nan=True
     )
 
 

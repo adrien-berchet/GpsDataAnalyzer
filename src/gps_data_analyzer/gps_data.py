@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from shapely.geometry import LineString
 
+from .utils import haversine
 from . import io
 
 
@@ -37,6 +38,7 @@ class _GpsBase(object):
         y_col=None,
         z_col=None,
         time_col=None,
+        use_haversine=True,
     ):
         input_crs = input_crs if input_crs is not None else self._default_input_crs
         local_crs = local_crs if local_crs is not None else input_crs
@@ -61,6 +63,7 @@ class _GpsBase(object):
         self.data = gdf
         self.crs = self.data.crs
 
+        self.use_haversine = use_haversine
         if self._has_time:
             self._normalize_data()
 
@@ -99,24 +102,6 @@ class _GpsBase(object):
     def __getattr__(self, attr):
         """Return the column as if it was an attribute"""
         return getattr(self.data, attr)
-        # if isinstance(attr, str):
-        #     not_found = set([attr]) - set(self.data.columns)
-        #     is_str = True
-        # elif isinstance(attr, Iterable):
-        #     not_found = set(attr) - set(self.data.columns)
-        #     is_str = False
-        # else:
-        #     raise TypeError(
-        #         "The 'attr' argument must be a string or a list of strings")
-
-        # if not_found:
-        #     msg = "The attribute{} '{}' {} not found".format(
-        #         "" if is_str else "s",
-        #         attr,
-        #         "was" if is_str else "were")
-        #     raise ValueError(msg)
-        # else:
-        #     return self.data[attr]
 
     def __len__(self):
         return len(self.data)
@@ -179,7 +164,11 @@ class _GpsBase(object):
         ).values / pd.Timedelta(1, "s")
 
         # Conpute distance between consecutive points (in m)
-        self.data["dist"] = self.data.distance(self.data.geometry.shift())
+        shifted = self.data.geometry.shift()
+        if self.crs.to_epsg() == 4326 and self.use_haversine:
+            self.data["dist"] = haversine(self.y, self.x, shifted.y, shifted.x)
+        else:
+            self.data["dist"] = self.data.distance(shifted)
 
         # Conpute velocity between consecutive points (in m/s)
         self.data["velocity"] = self.data["dist"] / self.data["dt"]

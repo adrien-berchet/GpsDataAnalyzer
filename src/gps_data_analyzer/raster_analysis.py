@@ -1,10 +1,10 @@
-import cartopy.crs as ccrs
-import cartopy.io.img_tiles as cimgt
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import spatial
 
 from .plot_utils import add_annotated_points
+from .plot_utils import create_transparent_cmap
+from .plot_utils import setup_axis
 
 
 class Extent(object):
@@ -32,6 +32,9 @@ class Extent(object):
     def __iter__(self):
         for i in [self.xmin, self.xmax, self.ymin, self.ymax]:
             yield i
+
+    def __getitem__(self, key):
+        return [self.xmin, self.xmax, self.ymin, self.ymax][key]
 
     def mesh(self, mesh_size=None, x_size=None, y_size=None, nx=None, ny=None):
         # Check arguments
@@ -90,54 +93,34 @@ class Raster(object):
         cmap=None,
         annotations=None,
         background=False,
-        zoom=14,
+        zoom=None,
         proj=None,
         annotation_kwargs=None,
     ):
         """Plot points with background and annotations"""
 
-        # Define default projection
-        if proj is None:
-            proj = ccrs.Geodetic()
+        # Setup axis
+        fig, ax = setup_axis(
+            ax=ax,
+            extent=self.extent,
+            projection=proj,
+            background=background,
+            zoom=zoom
+        )
 
         # Define CMAP
         if cmap is None:
-            cmap = self._create_cmap()
-
-        # Create the figure instance
-        if ax is None:
-            fig = plt.figure()
-
-            # Create a GeoAxes in the tile's projection.
-            ax = fig.add_subplot(1, 1, 1, projection=proj)
-
-        # Limit the extent of the map to a small longitude/latitude range
-        ax.set_extent(self.extent, crs=proj)
-
-        if background is True:
-            # Create a default terrain background instance
-            background = cimgt.GoogleTiles(style="satellite")
-
-        if background is not False:
-            # Add the background data
-            ax.add_image(background, zoom)
-
-        # Define raster
-        raster_pos = np.rot90(self.values)
+            cmap = create_transparent_cmap()
 
         # Add raster
         ax.imshow(
-            raster_pos,
+            self.values,
             cmap=cmap,
             extent=self.extent,
             origin="upper",
             transform=proj,
             zorder=10,
         )
-
-        # Add track markers
-        x, y = self._xy()
-        ax.plot(x, y, "k.", markersize=2, transform=proj)
 
         # Add annotations
         if annotations is not None:
@@ -147,6 +130,8 @@ class Raster(object):
 
         if show is True:
             plt.show()
+        else:
+            return fig, ax
 
 
 def heatmap(

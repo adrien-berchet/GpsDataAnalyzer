@@ -27,6 +27,11 @@ def test_create_track_sort(simple_gps_df, simple_gps_raw_data):
     assert res.z.tolist() == z
     assert res.t.tolist() == [pd.to_datetime(i) for i in t]
     assert res.crs.to_epsg() == 4326
+    assert np.allclose(res.dt.values, [np.nan, 23.0, 135.0], equal_nan=True)
+    assert np.allclose(res.dist.values, [np.nan, 15724.02, 15723.75], equal_nan=True)
+    assert np.allclose(
+        res.velocity.values, [np.nan, 683.6529, 116.4722], equal_nan=True
+    )
 
 
 def test_create_track_proj(simple_gps_df, simple_gps_raw_data):
@@ -49,12 +54,18 @@ def test_create_track_proj(simple_gps_df, simple_gps_raw_data):
     assert res.z.tolist() == z
     assert res.t.tolist() == [pd.to_datetime(i) for i in t]
     assert res.crs.to_epsg() == 2154
+    assert np.allclose(res.dt.values, [np.nan, 23.0, 135.0], equal_nan=True)
+    assert np.allclose(res.dist.values, [np.nan, 20707.888, 20682.199], equal_nan=True)
+    assert np.allclose(
+        res.velocity.values, [np.nan, 900.343, 153.201], equal_nan=True
+    )
 
 
 def test_poi(simple_poi_data, simple_poi_raw_data):
-    assert np.equal(simple_poi_data.x, [0.5]).all()
-    assert np.equal(simple_poi_data.y, [0.5]).all()
-    assert np.equal(simple_poi_data.radius, [0.75]).all()
+    x, y, r = simple_poi_raw_data
+    assert np.equal(simple_poi_data.x, x).all()
+    assert np.equal(simple_poi_data.y, y).all()
+    assert np.equal(simple_poi_data.radius, r).all()
     assert simple_poi_data.crs.to_epsg() == 4326
 
 
@@ -71,7 +82,7 @@ def test_mask(simple_poi_data, simple_gps_data):
 
     # Check results
     assert len(simple_gps_data) == 1
-    assert np.equal(simple_gps_data.xy, [[0.2, 1.2]]).all()
+    assert np.equal(simple_gps_data.xy, [[0, 1]]).all()
     assert simple_gps_data.index == pd.core.indexes.range.RangeIndex(0, 1, 1)
 
 
@@ -88,5 +99,5 @@ def test_mask_polygon(simple_poi_data, simple_gps_data):
 
     # Check results
     assert len(simple_gps_data) == 1
-    assert np.equal(simple_gps_data.xy, [[0.2, 1.2]]).all()
+    assert np.equal(simple_gps_data.xy, [[0, 1]]).all()
     assert simple_gps_data.index == pd.core.indexes.range.RangeIndex(0, 1, 1)

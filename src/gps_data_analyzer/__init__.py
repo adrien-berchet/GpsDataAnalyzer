@@ -6,3 +6,4 @@ from .io import save  # noqa
 from . import plot_utils  # noqa
 from . import raster_analysis  # noqa
 from . import time_analysis  # noqa
+from . import utils  # noqa
