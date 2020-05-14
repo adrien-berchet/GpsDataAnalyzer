@@ -4,6 +4,11 @@ This package contains some helpers I use in other projects to handle GPS data.
 It is currently designed to suit my own needs but it might be extended when I need new
 features. Of course, comments, issues, feature requests and PR are welcome.
 
+The documentation of this package is accessible online here:
+* stable version: https://gpsdataanalyzer.readthedocs.io/en/stable/
+* latest version: https://gpsdataanalyzer.readthedocs.io/en/latest/
+
+
 ## Installation
 
 This package can be installed using pip:
