@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
     "Intended Audience :: Information Technology",
@@ -28,12 +28,17 @@ with open("requirements-test.pip") as f:
 with open("requirements-dev.pip") as f:
     req_dev = f.read().splitlines()
 
+with open("README.md") as f:
+    long_description = f.read()
+
 setup(
     name="GpsDataAnalyzer",
     use_scm_version=True,
     description=(
         "A simple Python toolkit to analyze GPS data"
     ),
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="Adrien Berchet",
     author_email="adrien.berchet@gmail.com",
     url="https://github.com/adrien-berchet/GpsDataAnalyzer",
