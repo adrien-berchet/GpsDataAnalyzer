@@ -1,18 +1,14 @@
-.. GpsDataAnalyzer documentation master file, created by
-   sphinx-quickstart on Wed May 13 23:03:17 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to GpsDataAnalyzer's documentation!
-===========================================
-
-.. include:: ../README.rst
+.. mdinclude:: ../README.md
 
 .. toctree::
-   :maxdepth: 4
-   :caption: Table of Contents
+   :caption: References
 
-   references
+   gps_data_analyzer.gps_data
+   gps_data_analyzer.io
+   gps_data_analyzer.plot_utils
+   gps_data_analyzer.raster_analysis
+   gps_data_analyzer.time_analysis
+   gps_data_analyzer.utils
 
 
 Indices and tables

@@ -6,8 +6,10 @@ import numpy as np
 
 
 def create_transparent_cmap(name="rainbow"):
-    """Create a ``matplotlib.colors.ListedColormap`` with transparency for the lowest
-    value.
+    """Create a colormap with transparency for the lowest value.
+
+    Returns:
+        ``matplotlib.colors.ListedColormap``: The colormap.
     """
     default_cmap = plt.get_cmap(name)
     cmap = default_cmap(np.arange(default_cmap.N))
@@ -19,10 +21,10 @@ def add_annotated_points(ax, points, **kwargs):
     """Add annotated points to the given axis.
 
     Args:
-        ax: The axis to update.
-        points: The points to add to the axis.
-        kwargs: The given kwargs will be passed to the ``matplotlib.pyplot.annotate()``
-            function.
+        ax (``matplotlib.pyplot.Axes``): The axis object to update.
+        points (:py:class:`~gps_data_analyzer.gps_data.PoiPoints`): The points to add to
+            the axis.
+        kwargs: The given kwargs will be passed to :func:`matplotlib.pyplot.annotate`.
 
     Note:
         The `points` object must be a ``pandas.DataFrame`` with the following columns:
@@ -76,7 +78,20 @@ def setup_axis(
     background=False,
     zoom=10
 ):
-    """Setup a matplotlib.pyplot.Axes instance"""
+    """Setup a ``matplotlib.pyplot.Axes`` instance.
+
+    Args:
+        ax (``matplotlib.pyplot.Axes``, optional): The axis object to update.
+        extent (:py:class:`~gps_data_analyzer.raster_analysis.Extent` or :py:obj:`list`\
+            of :py:obj:`float`): The extent to set.
+        projection (:py:class:`cartopy.crs.Projection`, optional): The projection of the
+            axis (:py:class:`~cartopy.crs.PlateCarree` by default).
+        background (bool or :py:class:`cartopy.io.img_tiles.GoogleWTS`, optional): If
+            true, a default background is added using Google Satellite. If a
+            :obj:`~cartopy.io.img_tiles.GoogleWTS` object is given, it is used.
+        zoom (int, mandatory if :py:obj:`background` is not :py:obj:`None`): The zoom
+            value used to generate the background.
+    """
 
     # Define projection
     if projection is None:
@@ -114,15 +129,44 @@ def plot(
     ax=None,
     show=True,
     projection=None,
-    annotations=None,
-    annotations_kwargs=None,
     background=False,
+    zoom=None,
+    annotations=None,
+    annotation_kwargs=None,
     border=0,
     extent=None,
-    zoom=None,
     **kwargs
 ):
-    """Plot data with background and annotations"""
+    """Plot data with background and annotations.
+
+    Args:
+        data (:py:class:`~gps_data_analyzer.gps_data._GpsBase`): The object to plot.
+        var (str, optional): The column used as plotted value.
+        vmin (float, optional): The lower clipping value.
+        vmax (float, optional): The upper clipping value.
+        ax (``matplotlib.pyplot.Axes``, optional): The axis object to update.
+        show (bool, optional): If true, call :func:`plt.show` else return the figure
+            and axis objects.
+        projection (:py:class:`cartopy.crs.Projection`, optional): The projection of the
+            axis (:py:class:`~cartopy.crs.PlateCarree` by default).
+        background (bool or :py:class:`cartopy.io.img_tiles.GoogleWTS`, optional): If
+            true, a default background is added using Google Satellite. If a
+            :obj:`~cartopy.io.img_tiles.GoogleWTS` object is given, it is used.
+        zoom (int, mandatory if :py:obj:`background` is not :py:obj:`None`): The zoom
+            value used to generate the background.
+        annotations (:py:class:`~gps_data_analyzer.gps_data.PoiPoints`, optional): The
+            points used to annotate the figure.
+        annotation_kwargs (dict): The kwargs passed to
+            :func:`~gps_data_analyzer.plot_utils.add_annotated_points`.
+        border (float, optional): The extra border around the data (not used if
+            :py:attr:`extent` is given).
+        extent (:py:class:`~gps_data_analyzer.raster_analysis.Extent` or :py:obj:`list`\
+            of :py:obj:`float`): The extent to set.
+        kwargs: The given kwargs will be passed to :func:`pandas.DataFrame.plot`.
+
+    Returns:
+        The figure and axis if :py:attr:`show` is False, :py:obj:`None` otherwise.
+    """
 
     # Limit the extent of the map to the min/max coords
     if extent is None:
@@ -148,9 +192,9 @@ def plot(
 
     # Add annotations
     if annotations is not None:
-        if annotations_kwargs is None:
-            annotations_kwargs = {}
-        add_annotated_points(ax, annotations, **annotations_kwargs)
+        if annotation_kwargs is None:
+            annotation_kwargs = {}
+        add_annotated_points(ax, annotations, **annotation_kwargs)
 
     # Show the figure
     if show is True:
@@ -160,7 +204,15 @@ def plot(
 
 
 def plot_segments(gps_data, *args, **kwargs):
-    """Plot segments with background and annotations"""
+    """Plot segments with background and annotations.
+
+    Args:
+        gps_data (:py:class:`~gps_data_analyzer.gps_data._GpsBase`): The object to plot.
+
+    Note:
+        The given object is converted into segments then plotted using
+        :func:`~gps_data_analyzer.plot_utils.plot`.
+    """
     segments = gps_data.segments()
 
     return plot(segments, *args, **kwargs)

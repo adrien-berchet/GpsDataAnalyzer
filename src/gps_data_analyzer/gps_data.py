@@ -45,6 +45,17 @@ class _GpsBase(object):
         _use_haversine (bool): Indicate whether the distance computations must use the
             Haversine formula or not.
         datetime_format (str): The format used to convert strings into timestamps.
+
+    Args:
+        df (``pandas.DataFrame``): The data that will be formatted and stored.
+        input_crs (int): The EPSG code of the input data.
+        local_crs (int): The EPSG code of the local projection to which the data will
+            be transformed.
+        keep_cols (:obj:`list` of :obj:`str`): The columns that should not be discarded.
+        x_col (str): The name of the column that contains X coordinates.
+        y_col (str): The name of the column that contains Y coordinates.
+        z_col (str): The name of the column that contains Z coordinates.
+        time_col (str): The name of the column that contains timestamps.
     """
 
     _default_input_crs = 4326
@@ -69,6 +80,7 @@ class _GpsBase(object):
         z_col=None,
         time_col=None,
     ):
+
         input_crs = input_crs if input_crs is not None else self._default_input_crs
         local_crs = local_crs if local_crs is not None else input_crs
         x_col = x_col if x_col is not None else self._default_x_col
@@ -97,12 +109,12 @@ class _GpsBase(object):
 
     @property
     def x(self):
-        """pandas.Series: Get X coordinates from the geometry."""
+        """``pandas.Series``: Get X coordinates from the geometry."""
         return self.data.geometry.x
 
     @property
     def y(self):
-        """pandas.Series: Get Y coordinates from the geometry."""
+        """``pandas.Series``: Get Y coordinates from the geometry."""
         return self.data.geometry.y
 
     @property
@@ -111,7 +123,7 @@ class _GpsBase(object):
         otherwise.
 
         Returns:
-            pandas.Series: Timestamps.
+            ``pandas.Series``: Timestamps.
         """
         if self._has_time:
             attr = "datetime"
@@ -121,7 +133,7 @@ class _GpsBase(object):
 
     @property
     def xy(self):
-        """np.array: Array with a (x,y) couple of each point."""
+        """``numpy.array``: Array with a (x,y) couple of each point."""
         return np.vstack([self.data.geometry.x, self.data.geometry.y]).T
 
     def __eq__(self, other):
@@ -142,7 +154,11 @@ class _GpsBase(object):
         return getattr(self.data, attr)
 
     def __len__(self):
-        """int: the length of the internal ``geopandas.GeoDataFrame``."""
+        """Get the length of the internal data.
+
+        Returns:
+            int: The length of the internal ``geopandas.GeoDataFrame``
+        """
         return len(self.data)
 
     def _format_data(
@@ -159,7 +175,8 @@ class _GpsBase(object):
         """Format a ``pandas.DataFrame`` or ``geopandas.GeoDataFrame``.
 
         Args:
-            df (pandas.DataFrame or geopandas.GeoDataFrame): The object to format.
+            df (``pandas.DataFrame`` or ``geopandas.GeoDataFrame``): The object to
+                format.
             input_crs (int): The EPSG code of the input data.
             local_crs (int or None): The EPSG code of the local projection to which the
                 data will be transformed.
@@ -196,6 +213,8 @@ class _GpsBase(object):
             df = gpd.GeoDataFrame(
                 df, crs=input_crs, geometry=gpd.points_from_xy(df[x_col], df[y_col])
             )
+        else:
+            input_crs = df.crs.to_epsg()
 
         # Drop useless columns
         cols = ["geometry"]
@@ -238,7 +257,7 @@ class _GpsBase(object):
         """Add a column to the internal ``geopandas.GeoDataFrame``.
 
         Args:
-            attr (pandas.Series): The column to add.
+            attr (``pandas.Series``): The column to add.
             name (str, optional): The name of the new attribute. If not provided, the
                 name of the ``pandas.Series`` is used.
 
