@@ -1,3 +1,7 @@
+![CI](https://github.com/adrien-berchet/GpsDataAnalyzer/workflows/CI/badge.svg)
+[![codecov](https://codecov.io/gh/adrien-berchet/GpsDataAnalyzer/branch/master/graph/badge.svg)](https://codecov.io/gh/adrien-berchet/GpsDataAnalyzer)
+
+
 # Welcome to GpsDataAnalyzer
 
 This package contains some helpers I use in other projects to handle GPS data.

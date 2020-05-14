@@ -67,7 +67,13 @@ jobs:
     - name: Check coverage
       run: tox -e coverage
 
-    # Store coverage results
+    # Send data to Codecov
+    - name: Codecov
+      run: |
+        pip install codecov
+        codecov -t ${{ secrets.codecov_token }}
+
+    # Store coverage and flake8 reports
     - name: Upload reports
       uses: actions/upload-artifact@v1
       with:
