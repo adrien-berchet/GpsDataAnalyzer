@@ -8,7 +8,26 @@ from .plot_utils import setup_axis
 
 
 class Extent(object):
-    """docstring for Extent"""
+    """Class to manage extent of a Raster data and generate a mesh.
+
+    Attributes:
+        inner_xmin (float): The minimum X coordinate not considering the border.
+        inner_xmax (float): The maximum X coordinate not considering the border.
+        inner_ymin (float): The minimum Y coordinate not considering the border.
+        inner_ymax (float): The maximum Y coordinate not considering the border.
+        xmin (float): The minimum X coordinate considering the border.
+        xmax (float): The maximum X coordinate considering the border.
+        ymin (float): The minimum Y coordinate considering the border.
+        ymax (float): The maximum Y coordinate considering the border.
+        border (float): The extra border to add around the data values.
+
+    Args:
+        xmin (float): The minimum X coordinate.
+        xmax (float): The maximum X coordinate.
+        ymin (float): The minimum Y coordinate.
+        ymax (float): The maximum Y coordinate.
+        border (float, optional): The extra border to add around the data values.
+    """
 
     def __init__(self, xmin, xmax, ymin, ymax, border=0):
         self.border = border
@@ -22,7 +41,11 @@ class Extent(object):
         self.ymax = ymax + border
 
     def reset_border(self, border):
-        # Define new extent
+        """Define new extent and recalculate the extent according to it.
+
+        Args:
+            border (float): The extra border to add around the data values.
+        """
         self.border = border
         self.xmin = self.inner_xmin - border
         self.xmax = self.inner_xmax + border
@@ -37,6 +60,21 @@ class Extent(object):
         return [self.xmin, self.xmax, self.ymin, self.ymax][key]
 
     def mesh(self, mesh_size=None, x_size=None, y_size=None, nx=None, ny=None):
+        """Create a mesh in the current extent.
+
+        Args:
+            mesh_size (float, optional): The space between two pixels of the heatmap.
+            x_size (float, optional): The space between two pixels of the heatmap along
+                the X axis.
+            y_size (float, optional): The space between two pixels of the heatmap along
+                the Y axis.
+            nx (int, optional): The number of pixels of the heatmap along the X axis.
+            ny (int, optional): The number of pixels of the heatmap along the Y axis.
+
+        Returns:
+            (``numpy.array``, ``numpy.array``): X and Y coordinates of the mesh nodes.
+        """
+
         # Check arguments
         if nx is None and ny is None:
             err_msg = (
@@ -77,7 +115,26 @@ class Extent(object):
 
 
 class Raster(object):
-    """docstring for Raster"""
+    """Class to manage Raster data.
+
+    Attributes:
+        X (int): The default EPSG code of input data (only used when
+            ``input_crs`` is ``None``).
+        Y (str): The default column name of input data that contains X
+            coordinates (only used when ``x_col`` is ``None``).
+        values (str): The default column name of input data that contains Y
+            coordinates (only used when ``y_col`` is ``None``).
+        extent (str): The default column name of input data that contains Z
+            coordinates (only used when ``z_col`` is ``None`` and ``_has_z`` is
+            ``True``).
+
+    Args:
+        X (``numpy.array``): The X coordinates.
+        Y (``numpy.array``): The Y coordinates.
+        values (``numpy.array``): The values at each point (X, Y).
+        extent (:py:class:`~gps_data_analyzer.raster_analysis.Extent`): The extent of
+            the raster data.
+    """
 
     def __init__(self, X, Y, values, extent):
         assert X.size == Y.size == values.size
@@ -90,20 +147,46 @@ class Raster(object):
         self,
         ax=None,
         show=True,
+        projection=None,
         cmap=None,
-        annotations=None,
         background=False,
         zoom=None,
-        proj=None,
+        annotations=None,
         annotation_kwargs=None,
+        **kwargs
     ):
-        """Plot points with background and annotations"""
+        """Plot raster with background and annotations.
+
+        Args:
+            ax (``matplotlib.pyplot.Axes``, optional): The axis object to update.
+            show (bool, optional): If true, call :func:`plt.show` else return the figure
+                and axis objects.
+            projection (:py:class:`cartopy.crs.Projection`, optional): The projection of
+                the axis (:py:class:`~cartopy.crs.PlateCarree` by default).
+            cmap (:py:class:`matplotlib.colors.Colormap`, optional): The colormap to use
+                (a default will be created if not given).
+            background (bool or :py:class:`cartopy.io.img_tiles.GoogleWTS`, optional): \
+                If true, a default background is added using Google Satellite. If a
+                :obj:`~cartopy.io.img_tiles.GoogleWTS` object is given, it is used.
+            zoom (int, mandatory if :py:obj:`background` is not :py:obj:`None`): The
+                zoom value used to generate the background.
+            annotations (:py:class:`~gps_data_analyzer.gps_data.PoiPoints`, optional): \
+                The points used to annotate the figure.
+            annotation_kwargs (dict, optional): The kwargs passed to
+                :func:`~gps_data_analyzer.plot_utils.add_annotated_points`.
+            kwargs: The given kwargs will be passed to
+                :func:`matplotlib.pyplot.Axes.imshow`.
+
+        Returns:
+            :py:class:`~gps_data_analyzer.raster_analysis.Raster` The 2D array
+            containing the result.
+        """
 
         # Setup axis
         fig, ax = setup_axis(
             ax=ax,
             extent=self.extent,
-            projection=proj,
+            projection=projection,
             background=background,
             zoom=zoom
         )
@@ -118,8 +201,9 @@ class Raster(object):
             cmap=cmap,
             extent=self.extent,
             origin="upper",
-            transform=proj,
+            transform=projection,
             zorder=10,
+            **kwargs
         )
 
         # Add annotations
@@ -147,6 +231,27 @@ def heatmap(
     weight_col=None,
     normalize=True,
 ):
+    """Compute heatmap from a set of points using a Gaussian kernel.
+
+    Args:
+        gps_data (:py:class:`~gps_data_analyzer.gps_data._GpsBase`): The point set.
+        mesh_size (float, optional): The space between two pixels of the heatmap.
+        x_size (float, optional): The space between two pixels of the heatmap along the
+            X axis.
+        y_size (float, optional): The space between two pixels of the heatmap along the
+            Y axis.
+        nx (int, optional): The number of pixels of the heatmap along the X axis.
+        ny (int, optional): The number of pixels of the heatmap along the Y axis.
+        border (float, optional): The extra border around the data.
+        kernel_size (float, optional): The kernel size used for computation.
+        kernel_cut (float, optional): The kernel cut used for computation.
+        weight_col (str, optional): The column name used as point weights.
+        normalize (bool, optional): Trigger normalization of the result.
+
+    Returns:
+        :py:class:`~gps_data_analyzer.raster_analysis.Raster` The 2D array containing
+        the result.
+    """
     # Check arguments
     if kernel_size is not None and kernel_size <= 0:
         raise ValueError("The 'kernel_size' argument must be > 0")

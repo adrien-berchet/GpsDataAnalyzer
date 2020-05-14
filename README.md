@@ -1,17 +1,26 @@
+# Welcome to GpsDataAnalyzer
 
-"pycif" is a Python package to compute inversions mainly 
-with different inversion methods, models and data streams
+This package contains some helpers I use in other projects to handle GPS data.
+It is currently designed to suit my own needs but it might be extended when I need new
+features. Of course, comments, issues, feature requests and PR are welcome.
 
-To make your working copy known to your python session, you
-can install a local development version using:
+## Installation
 
+This package can be installed using pip:
+```bash
+pip install GpsDataAnalyzer
 ```
-python setup.py develop --user
-```
 
-which will "compile" the code locally but creates a link in
-your local library folder. The link can be removed with:
+## Main features
 
-```
-python setup.py develop --user -u
-```
+The main features consists in:
+* format GPS data according to their use (e.g. tracks or points of interest).
+* compute some properties of these GPS data (e.g. the time spent in an area around
+each point).
+* compute heatmaps.
+* plot figures with background, data and annotations.
+
+## Caveats
+
+Please note that this is a project I work on in my spare time, as such there might be
+errors in the implementations and sub-optimal performance.

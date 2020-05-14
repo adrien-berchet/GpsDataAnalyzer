@@ -7,9 +7,18 @@ from scipy import spatial
 
 def compute_rest_time(gps_data, radius):
     """Compute the duration during which the track stays in a given radius of each
-    point
+    point.
 
-    TODO: need optimization and cleaning"""
+    Args:
+        gps_data (:py:class:`~gps_data_analyzer.gps_data.PoiPoints`): The data used for
+            computation.
+        radius (float): The radius in which the rest time is computed around each point.
+
+    Returns:
+        ``pandas.Series``: The rest time around each point.
+    """
+
+    # TODO: need optimization and cleaning.
 
     def _t_inter(current, i1, i2, max_radius, geom="geometry", t="datetime"):
         d_i1 = i1[geom].distance(current[geom])
