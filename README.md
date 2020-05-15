@@ -1,5 +1,6 @@
 ![CI](https://github.com/adrien-berchet/GpsDataAnalyzer/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/adrien-berchet/GpsDataAnalyzer/branch/master/graph/badge.svg)](https://codecov.io/gh/adrien-berchet/GpsDataAnalyzer)
+[![Documentation Status](https://readthedocs.org/projects/gpsdataanalyzer/badge/?version=latest)](https://gpsdataanalyzer.readthedocs.io/en/latest/?badge=latest)
 
 
 # Welcome to GpsDataAnalyzer
