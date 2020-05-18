@@ -139,3 +139,49 @@ def test_mask_polygon_no_radius(simple_poi_data, simple_gps_data):
     assert len(simple_gps_data) == 1
     assert np.equal(simple_gps_data.xy, [[0, 1]]).all()
     assert simple_gps_data.index == pd.core.indexes.range.RangeIndex(0, 1, 1)
+
+
+def test_concatenate(simple_gps_data):
+    a = gda.GpsPoints(simple_gps_data.copy())
+    b = gda.GpsPoints(simple_gps_data.copy())
+    res = gda.concatenate([a, b])
+
+    assert res.x.tolist() == simple_gps_data.x.tolist() * 2
+    assert res.y.tolist() == simple_gps_data.y.tolist() * 2
+    assert res.z.tolist() == simple_gps_data.z.tolist() * 2
+    assert (
+        res.datetime.apply(
+            pd.Timestamp.isoformat
+        ).tolist() == simple_gps_data.datetime.apply(
+            pd.Timestamp.isoformat
+        ).tolist() * 2
+    )
+    assert np.allclose(
+        res.dt.tolist(), simple_gps_data.dt.tolist() * 2, equal_nan=True)
+    assert np.allclose(
+        res.dist.tolist(), simple_gps_data.dist.tolist() * 2, equal_nan=True)
+    assert np.allclose(
+        res.velocity.tolist(), simple_gps_data.velocity.tolist() * 2, equal_nan=True)
+
+
+def test_concatenate_csr(simple_gps_data):
+    a = gda.GpsPoints(simple_gps_data.copy().to_crs(3857))
+    b = gda.GpsPoints(simple_gps_data.copy().to_crs(2154))
+    res = gda.concatenate([a, b], crs=4326)
+
+    assert np.allclose(res.x.tolist(), simple_gps_data.x.tolist() * 2)
+    assert np.allclose(res.y.tolist(), simple_gps_data.y.tolist() * 2)
+    assert np.allclose(res.z.tolist(), simple_gps_data.z.tolist() * 2)
+    assert (
+        res.datetime.apply(
+            pd.Timestamp.isoformat
+        ).tolist() == simple_gps_data.datetime.apply(
+            pd.Timestamp.isoformat
+        ).tolist() * 2
+    )
+    assert np.allclose(
+        res.dt.tolist(), simple_gps_data.dt.tolist() * 2, equal_nan=True)
+    assert np.allclose(
+        res.dist.tolist(), simple_gps_data.dist.tolist() * 2, equal_nan=True)
+    assert np.allclose(
+        res.velocity.tolist(), simple_gps_data.velocity.tolist() * 2, equal_nan=True)

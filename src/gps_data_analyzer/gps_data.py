@@ -378,3 +378,35 @@ def load_poi_points(path):
         :py:obj:`PoiPoints`: The data loaded.
     """
     return PoiPoints(io._load(path))
+
+
+def concatenate(data_sets, crs=None):
+    """Concatenate several data sets.
+
+    Args:
+        data_sets (list): A list of data sets.
+        crs (int): The EPSG code to which the data sets will be projected.
+
+    Returns:
+        The new data set.
+    """
+    if len(data_sets) < 1:
+        raise ValueError("No data provided in 'data_sets' argument")
+    if crs is None:
+        for i in data_sets:
+            if crs is not None and i.crs != crs:
+                raise ValueError(
+                    "If all sets do not have the same CRS, use the 'crs' parameter")
+            crs = i.crs
+
+    try:
+        crs = crs.to_epsg()
+    except AttributeError:
+        pass
+
+    gdf = pd.concat([i.to_crs(crs) for i in data_sets])
+
+    data = data_sets[0]
+    data.data = gdf
+
+    return data
