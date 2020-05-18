@@ -34,7 +34,7 @@ def compute_rest_time(gps_data, radius):
 
     def _process_one_pt(num, points, max_radius, logger=logging):
         logger.debug("{}: {}".format(num, points))
-        data = gps_data.data
+        data = gps_data
         pts = np.array(points)
         pts.sort()
         pos_i = np.argwhere(pts == num)[0][0]

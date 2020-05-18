@@ -16,9 +16,21 @@ def test_create_track(simple_gps_data, simple_gps_raw_data):
 
 
 def test_equal_track(simple_gps_data):
-    new = gda.GpsPoints(simple_gps_data.data)
+    new = gda.GpsPoints(simple_gps_data)
 
-    assert new == simple_gps_data
+    assert new.equals(simple_gps_data)
+    assert np.equal((new == simple_gps_data), np.array(
+        [
+            [ True,  True,  False,  False,  False],
+            [ True,  True,  True,  True,  True],
+            [ True,  True,  True,  True,  True]
+        ])).all(axis=None)
+
+
+def test_copy_track(simple_gps_data):
+    new = simple_gps_data.copy()
+
+    assert new.equals(simple_gps_data)
 
 
 def test_create_track_sort(simple_gps_df, simple_gps_raw_data):
@@ -30,6 +42,35 @@ def test_create_track_sort(simple_gps_df, simple_gps_raw_data):
     assert res.x.tolist() == x
     assert res.y.tolist() == y
     assert np.equal(res.xy, np.vstack((x, y)).T).all()
+    assert res.z.tolist() == z
+    assert res.t.tolist() == [pd.to_datetime(i) for i in t]
+    assert res.crs.to_epsg() == 4326
+    assert np.allclose(res.dt.values, [np.nan, 23.0, 135.0], equal_nan=True)
+    assert np.allclose(res.dist.values, [np.nan, 15724.02, 15723.75], equal_nan=True)
+    assert np.allclose(
+        res.velocity.values, [np.nan, 683.6529, 116.4722], equal_nan=True
+    )
+
+
+def test_create_track_crs(simple_gps_df, simple_gps_raw_data):
+    x, y, z, t = simple_gps_raw_data
+
+    # Compute projected coordinates
+    proj = pyproj.Proj(2154)
+    xy_proj = [proj(i, j) for i, j in zip(x, y)]
+    x_proj = [i[0] for i in xy_proj]
+    y_proj = [i[1] for i in xy_proj]
+
+    df = simple_gps_df.copy()
+    df["x"] = x_proj
+    df["y"] = y_proj
+    res = gda.GpsPoints(
+        df, x_col="x", y_col="y", z_col="z", time_col="t", crs=2154, local_crs=4326
+    )
+
+    # Check results
+    assert np.allclose(res.x, x)
+    assert np.allclose(res.y, y)
     assert res.z.tolist() == z
     assert res.t.tolist() == [pd.to_datetime(i) for i in t]
     assert res.crs.to_epsg() == 4326
@@ -88,11 +129,6 @@ def test_poi(simple_poi_data, simple_poi_raw_data):
     assert simple_poi_data.crs.to_epsg() == 4326
 
 
-def test_poi_fail(simple_poi_df):
-    with pytest.raises(KeyError):
-        gda.PoiPoints(simple_poi_df.drop(columns=["radius"]), x_col="x", y_col="y")
-
-
 def test_mask(simple_poi_data, simple_gps_data):
     assert len(simple_gps_data) == 3
 
@@ -142,8 +178,8 @@ def test_mask_polygon_no_radius(simple_poi_data, simple_gps_data):
 
 
 def test_concatenate(simple_gps_data):
-    a = gda.GpsPoints(simple_gps_data.copy())
-    b = gda.GpsPoints(simple_gps_data.copy())
+    a = simple_gps_data.copy()
+    b = simple_gps_data.copy()
     res = gda.concatenate([a, b])
 
     assert res.x.tolist() == simple_gps_data.x.tolist() * 2
@@ -165,8 +201,8 @@ def test_concatenate(simple_gps_data):
 
 
 def test_concatenate_csr(simple_gps_data):
-    a = gda.GpsPoints(simple_gps_data.copy().to_crs(3857))
-    b = gda.GpsPoints(simple_gps_data.copy().to_crs(2154))
+    a = gda.GpsPoints(simple_gps_data.copy(), local_crs=3857)
+    b = gda.GpsPoints(simple_gps_data.copy(), local_crs=2154)
     res = gda.concatenate([a, b], crs=4326)
 
     assert np.allclose(res.x.tolist(), simple_gps_data.x.tolist() * 2)

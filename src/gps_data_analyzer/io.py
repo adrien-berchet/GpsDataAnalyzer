@@ -15,7 +15,7 @@ def save(obj, path, mode="w", **kwargs):
         If the GeoPackage exists, it is possible to add a new layer with the 'layer'
         argument.
     """
-    tmp = obj.data.copy()
+    tmp = obj.copy()
 
     # Convert datetime to string
     if obj._has_time:
@@ -25,7 +25,7 @@ def save(obj, path, mode="w", **kwargs):
     tmp.to_file(path, driver="GPKG", encoding="utf-8", **kwargs)
 
     # TODO: Fiona>=0.19 will be able to store metadata in GPKG files. It would be nice
-    # to store the data type in metadata so the load() function can now which class it
+    # to store the data type in metadata so the load() function can know which class it
     # should call.
 
 

@@ -188,6 +188,9 @@ def plot(
         data[var] = data[var].clip(vmin, vmax, inplace=True)
 
     # Add data
+    if var not in data.columns:
+        data = data.copy()
+        data[var] = getattr(data, var)
     data.plot(column=var, ax=ax, **kwargs)
 
     # Add annotations
