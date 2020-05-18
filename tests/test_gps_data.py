@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pyproj
-import pytest
 
 import gps_data_analyzer as gda
 
@@ -21,9 +20,9 @@ def test_equal_track(simple_gps_data):
     assert new.equals(simple_gps_data)
     assert np.equal((new == simple_gps_data), np.array(
         [
-            [ True,  True,  False,  False,  False],
-            [ True,  True,  True,  True,  True],
-            [ True,  True,  True,  True,  True]
+            [True, True, False, False, False],
+            [True, True, True, True, True],
+            [True, True, True, True, True]
         ])).all(axis=None)
 
 

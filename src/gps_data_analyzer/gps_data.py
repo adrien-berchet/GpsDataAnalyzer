@@ -167,6 +167,7 @@ class _GpsBase(gpd.GeoDataFrame):
         return base_cols
 
     def copy(self):
+        """Return a copy of the current object."""
         return self.__class__(self, crs=self.crs)
 
     def _format_data(
@@ -193,7 +194,7 @@ class _GpsBase(gpd.GeoDataFrame):
             time_col (str, optional): The name of the column containing timestamps.
             keep_cols (:obj:`list` of :obj:`str`, optional): The names of the columns
                 that should be kept (all others will be discarded).
-	    time_sort (bool): Sort data by ascending time (only used when ``_has_z`` is
+        time_sort (bool): Sort data by ascending time (only used when ``_has_z`` is
                 True).
 
         Note:
