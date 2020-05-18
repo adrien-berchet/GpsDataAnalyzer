@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pyproj
 from scipy import spatial
 
 from .plot_utils import add_annotated_points
@@ -112,6 +113,32 @@ class Extent(object):
         X, Y = np.mgrid[self.xmin : self.xmax : nx, self.ymin : self.ymax : ny]
 
         return X, Y
+
+    def project(self, new_epsg):
+        """Create a new :py:class:`~gps_data_analyzer.raster_analysis.Extent`
+        instance after projection.
+
+        Args:
+            new_epsg (int): The EPSG code of the target projection.
+
+        Returns:
+            :py:class:`~gps_data_analyzer.raster_analysis.Extent`: The projected
+                :py:class:`~gps_data_analyzer.raster_analysis.Extent`.
+        """
+        proj = pyproj.Proj(new_epsg)
+        inverse = True if new_epsg == 4326 else False
+        x, y = proj(
+            [self.inner_xmin, self.inner_xmax, self.xmin, self.xmax],
+            [self.inner_ymin, self.inner_ymax, self.ymin, self.ymax],
+            inverse=inverse
+        )
+        border = np.mean([
+            abs(x[0] - x[2]),
+            abs(x[1] - x[3]),
+            abs(y[0] - y[2]),
+            abs(y[1] - y[3]),
+        ])
+        return Extent(*x[:2], *y[:2], border)
 
 
 class Raster(object):

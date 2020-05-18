@@ -41,6 +41,7 @@ def test_extent():
 def test_extent_border():
     extent = gda.raster_analysis.Extent(0, 1, 2, 3, 0.1)
 
+    assert extent.border == 0.1
     assert extent.inner_xmin == 0
     assert extent.inner_xmax == 1
     assert extent.inner_ymin == 2
@@ -49,11 +50,37 @@ def test_extent_border():
 
     extent.reset_border(0.2)
 
+    assert extent.border == 0.2
     assert extent.inner_xmin == 0
     assert extent.inner_xmax == 1
     assert extent.inner_ymin == 2
     assert extent.inner_ymax == 3
     assert [i for i in extent] == [-0.2, 1.2, 1.8, 3.2]
+
+
+def test_extent_proj():
+    extent = gda.raster_analysis.Extent(0, 1, 2, 3, 0.1)
+    new = extent.project(2154)
+
+    assert new.border == pytest.approx(14375.25)
+    assert new.xmin == pytest.approx(250250.7)
+    assert new.xmax == pytest.approx(427719.4)
+    assert new.ymin == pytest.approx(1187347.7)
+    assert new.ymax == pytest.approx(1354881.2)
+    assert new.inner_xmin == pytest.approx(264625.9)
+    assert new.inner_xmax == pytest.approx(413344.16)
+    assert new.inner_ymin == pytest.approx(1201723.0)
+    assert new.inner_ymax == pytest.approx(1340505.9)
+    assert [i for i in new] == pytest.approx([250250.7, 427719.4, 1187347.7, 1354881.2])
+
+    init = extent.project(4326)
+
+    assert init.border == pytest.approx(0.1)
+    assert init.inner_xmin == pytest.approx(0)
+    assert init.inner_xmax == pytest.approx(1)
+    assert init.inner_ymin == pytest.approx(2)
+    assert init.inner_ymax == pytest.approx(3)
+    assert [i for i in init] == pytest.approx([-0.1, 1.1, 1.9, 3.1])
 
 
 def test_simple_heatmap(simple_gps_data):
