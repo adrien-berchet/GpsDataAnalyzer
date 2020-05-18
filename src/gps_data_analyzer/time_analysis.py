@@ -46,9 +46,12 @@ def compute_rest_time(gps_data, radius):
         # order of diff_not_one and the limits for label_inf_m1 and label_sup_p1
 
         # Inf part
-        if len(diff_not_one[:pos_i]) > 0:
-            diff_not_one[0] = True
-            pos_skip_inf = pos_i - np.argmax(np.flip(diff_not_one[:pos_i]))
+        if num > 0:
+            if len(diff_not_one[:pos_i]) > 0:
+                diff_not_one[0] = True
+                pos_skip_inf = pos_i - np.argmax(np.flip(diff_not_one[:pos_i]))
+            else:
+                pos_skip_inf = pos_i
             label_inf = pts[pos_skip_inf]
             label_inf_m1 = max(0, pts[pos_skip_inf] - 1)
             inf = data.loc[label_inf]
@@ -67,9 +70,12 @@ def compute_rest_time(gps_data, radius):
             t_inf_inter = pd.Timedelta(0)
 
         # Sup part
-        if len(diff_not_one[pos_i:]) > 0:
-            diff_not_one[-1] = True
-            pos_skip_sup = pos_i + np.argmax(diff_not_one[pos_i:])
+        if num != data.index.max():
+            if len(diff_not_one[pos_i:]) > 0:
+                diff_not_one[-1] = True
+                pos_skip_sup = pos_i + np.argmax(diff_not_one[pos_i:])
+            else:
+                pos_skip_sup = pos_i
             label_sup = pts[pos_skip_sup]
             label_sup_p1 = min(data.index.max(), pts[pos_skip_sup] + 1)
             sup = data.loc[label_sup]

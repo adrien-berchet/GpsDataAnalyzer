@@ -35,3 +35,17 @@ def test_rest_time_with_loops():
     assert np.equal(res[10:15], range(10, 19, 2)).all()
     assert res[15] == 20
     assert np.equal(res[-5:], range(9, 4, -1)).all()
+
+
+def test_rest_time_with_far_points():
+    x = [i * 10.0 for i in range(11)] + [i * 10.0 for i in range(9, -1, -1)]
+    y = [0] * 21
+    z = [0] * 21
+    t = ["2019/06/16-09:55:{:0}".format(i) for i in range(21)]
+    df = pd.DataFrame({"x": x, "y": y, "z": z, "t": t})
+    data = gda.GpsPoints(df, x_col="x", y_col="y", z_col="z", time_col="t")
+
+    res = gda.time_analysis.compute_rest_time(data, 5)
+
+    assert (res.loc[[0, 20]] == 0.5).all()
+    assert (res[1:-1] == 1).all()
