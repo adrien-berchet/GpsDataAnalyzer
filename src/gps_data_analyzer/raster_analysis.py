@@ -1,4 +1,3 @@
-import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
 import pyproj
@@ -116,26 +115,21 @@ class Extent(object):
 
         return X, Y
 
-    def project(self, current_proj, new_proj, inverse=None):
+    def project(self, current_proj, new_proj):
         """Create a new :py:class:`~gps_data_analyzer.raster_analysis.Extent`
         instance after projection.
 
         Args:
-            new_proj (int or str): The EPSG code or the Proj4 string of the target
-                projection.
+            current_proj (:py:class:`pyproj.proj.Proj` or int): The current projection.
+            new_proj (:py:class:`pyproj.proj.Proj` or int): The target projection.
 
         Returns:
-            :py:class:`~gps_data_analyzer.raster_analysis.Extent`: The projected
-                :py:class:`~gps_data_analyzer.raster_analysis.Extent`.
+            :py:class:`~gps_data_analyzer.raster_analysis.Extent`: The projected extent.
         """
-        if inverse is None:
-            inverse = True if new_proj == 4326 else False
-        x, y = pyproj.transform(
-            current_proj,
-            new_proj,
+        tr = pyproj.Transformer.from_proj(current_proj, new_proj, always_xy=True)
+        x, y = tr.transform(
             [self.inner_xmin, self.inner_xmax, self.xmin, self.xmax],
-            [self.inner_ymin, self.inner_ymax, self.ymin, self.ymax],
-            inverse=inverse
+            [self.inner_ymin, self.inner_ymax, self.ymin, self.ymax]
         )
         border = np.mean([
             abs(x[0] - x[2]),
@@ -180,7 +174,6 @@ class Raster(object):
         self,
         ax=None,
         show=True,
-        projection=None,
         cmap=None,
         background=False,
         zoom=None,
@@ -194,8 +187,6 @@ class Raster(object):
             ax (``matplotlib.pyplot.Axes``, optional): The axis object to update.
             show (bool, optional): If true, call :func:`plt.show` else return the figure
                 and axis objects.
-            projection (:py:class:`cartopy.crs.Projection`, optional): The projection of
-                the axis (:py:class:`~cartopy.crs.PlateCarree` by default).
             cmap (:py:class:`matplotlib.colors.Colormap`, optional): The colormap to use
                 (a default will be created if not given).
             background (bool or :py:class:`cartopy.io.img_tiles.GoogleWTS`, optional): \

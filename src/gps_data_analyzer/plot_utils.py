@@ -1,76 +1,8 @@
-from collections import defaultdict
-import re
-
 import cartopy.crs as ccrs
 import cartopy.io.img_tiles as cimgt
 from matplotlib.colors import ListedColormap
 import matplotlib.pyplot as plt
 import numpy as np
-
-from .crs import proj_to_cartopy
-
-
-_CCRS_ATTRS = dir(ccrs)
-_CCRS_CRS = [i for i in _CCRS_ATTRS if hasattr(getattr(ccrs, i), "proj4_init")]
-
-
-def _parse_proj4(input_proj):
-    datum = re.match(r".*datum=(\S+).*", input_proj)
-    ellps = re.match(r".*ellps=(\S+).*", input_proj)
-    proj = re.match(r".*proj=(\S+).*", input_proj)
-    return (
-        proj.group(1) if proj is not None else proj,
-        datum.group(1) if datum is not None else datum,
-        ellps.group(1) if ellps is not None else ellps
-    )
-
-
-_CCRS_PROJ4 = defaultdict(dict)
-for i in _CCRS_CRS:
-    try:
-        name = getattr(ccrs, i)
-        proj4_i = getattr(ccrs, i)().proj4_init
-        proj, datum, ellps = _parse_proj4(proj4_i)
-        _CCRS_PROJ4[proj][(datum, ellps)] = name
-    except:
-        pass
-
-
-def ccrs_from_proj4(proj4_str):
-    import pdb
-    pdb.set_trace()
-    proj, datum, ellps = _parse_proj4(proj4_str)
-    if proj == "longlat":
-        proj = "lonlat"
-    elif proj == "latlong":
-        proj = "latlong"
-    projection = _CCRS_PROJ4.get(proj)
-    if projection is None:
-        return None
-    else:
-        # generic = False
-        name = projection.get((datum, ellps), None)
-        if name is None:
-            # generic = True
-            name = projection.get((None, None), None)
-            if name is None:
-                try:
-                    key = list(projection.keys()).pop()
-                except IndexError:
-                    key = None
-                name = projection.get(key, None)
-
-    if name is None:
-        return None
-
-    # if not generic:
-    #     return name(proj4_str)
-
-    try:
-        globe = ccrs.Globe(datum=datum, ellipse=ellps)
-        return name(proj4_str, globe=globe)
-    except:
-        return name(proj4_str)
 
 
 def create_transparent_cmap(name="rainbow"):

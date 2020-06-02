@@ -146,7 +146,7 @@ def proj_to_cartopy(proj):
         v = s[1].strip()
         try:
             v = float(v)
-        except:
+        except Exception:
             pass
         if k == 'proj':
             if v == 'tmerc':

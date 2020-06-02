@@ -1,6 +1,7 @@
 import pytest
 
 import numpy as np
+import pyproj
 
 import gps_data_analyzer as gda
 
@@ -60,7 +61,11 @@ def test_extent_border():
 
 def test_extent_proj():
     extent = gda.raster_analysis.Extent(0, 1, 2, 3, 0.1)
-    new = extent.project(2154)
+
+    # Use pyproj.Proj()
+    in_crs = pyproj.Proj(4326)
+    out_crs = pyproj.Proj(2154)
+    new = extent.project(in_crs, out_crs)
 
     assert new.border == pytest.approx(14375.25)
     assert new.xmin == pytest.approx(250250.7)
@@ -73,7 +78,8 @@ def test_extent_proj():
     assert new.inner_ymax == pytest.approx(1340505.9)
     assert [i for i in new] == pytest.approx([250250.7, 427719.4, 1187347.7, 1354881.2])
 
-    init = extent.project(4326)
+    # Use EPSG codes
+    init = extent.project(4326, 4326)
 
     assert init.border == pytest.approx(0.1)
     assert init.inner_xmin == pytest.approx(0)
