@@ -133,3 +133,22 @@ def test_plot_heatmap_annotations(simple_gps_data, simple_poi_data):
     ax.plot(x, y, "k.", markersize=10, transform=ax.projection, zorder=15)
 
     return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_plot_heatmap_projection(simple_gps_data, simple_poi_data):
+    simple_gps_data.to_crs(2154, inplace=True)
+
+    # Define raster
+    raster = gda.raster_analysis.heatmap(
+        simple_gps_data, weight_col="z", nx=15, ny=15, border=5000)
+
+    # Plot raster and annotations
+    fig, ax = raster.plot(show=False, annotations=simple_poi_data)
+
+    # Add track markers
+    x = simple_gps_data.x
+    y = simple_gps_data.y
+    ax.plot(x, y, "k.", markersize=10, transform=ax.projection, zorder=15)
+
+    return fig

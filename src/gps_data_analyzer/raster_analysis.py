@@ -1,3 +1,4 @@
+import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
 import pyproj
@@ -5,6 +6,7 @@ from scipy import spatial
 
 from .plot_utils import add_annotated_points
 from .plot_utils import create_transparent_cmap
+from .crs import proj_to_cartopy
 from .plot_utils import setup_axis
 
 
@@ -114,20 +116,23 @@ class Extent(object):
 
         return X, Y
 
-    def project(self, new_epsg):
+    def project(self, current_proj, new_proj, inverse=None):
         """Create a new :py:class:`~gps_data_analyzer.raster_analysis.Extent`
         instance after projection.
 
         Args:
-            new_epsg (int): The EPSG code of the target projection.
+            new_proj (int or str): The EPSG code or the Proj4 string of the target
+                projection.
 
         Returns:
             :py:class:`~gps_data_analyzer.raster_analysis.Extent`: The projected
                 :py:class:`~gps_data_analyzer.raster_analysis.Extent`.
         """
-        proj = pyproj.Proj(new_epsg)
-        inverse = True if new_epsg == 4326 else False
-        x, y = proj(
+        if inverse is None:
+            inverse = True if new_proj == 4326 else False
+        x, y = pyproj.transform(
+            current_proj,
+            new_proj,
             [self.inner_xmin, self.inner_xmax, self.xmin, self.xmax],
             [self.inner_ymin, self.inner_ymax, self.ymin, self.ymax],
             inverse=inverse
@@ -163,12 +168,13 @@ class Raster(object):
             the raster data.
     """
 
-    def __init__(self, X, Y, values, extent):
+    def __init__(self, X, Y, values, extent, crs=None):
         assert X.size == Y.size == values.size
         self.X = X
         self.Y = Y
         self.values = values
         self.extent = extent
+        self.crs = crs
 
     def plot(
         self,
@@ -213,7 +219,7 @@ class Raster(object):
         fig, ax = setup_axis(
             ax=ax,
             extent=self.extent,
-            projection=projection,
+            projection=proj_to_cartopy(self.crs),
             background=background,
             zoom=zoom
         )
@@ -228,7 +234,6 @@ class Raster(object):
             cmap=cmap,
             extent=self.extent,
             origin="upper",
-            transform=projection,
             zorder=10,
             **kwargs
         )
@@ -237,7 +242,7 @@ class Raster(object):
         if annotations is not None:
             if annotation_kwargs is None:
                 annotation_kwargs = {}
-            add_annotated_points(ax, annotations, **annotation_kwargs)
+            add_annotated_points(ax, annotations.to_crs(self.crs), **annotation_kwargs)
 
         if show is True:
             plt.show()  # pragma: no cover
@@ -349,4 +354,4 @@ def heatmap(
     # Reshape and rotate the result
     heatmap = np.rot90(np.reshape(kde, X.shape))
 
-    return Raster(X, Y, heatmap, extent)
+    return Raster(X, Y, heatmap, extent, gps_data.crs)
