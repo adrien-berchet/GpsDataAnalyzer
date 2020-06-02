@@ -1,3 +1,5 @@
+import pytest
+
 import numpy as np
 import pandas as pd
 import pyproj
@@ -12,6 +14,7 @@ def test_create_track(simple_gps_data, simple_gps_raw_data):
     assert simple_gps_data.y.tolist() == y
     assert simple_gps_data.z.tolist() == z
     assert simple_gps_data.t.tolist() == [pd.to_datetime(i) for i in t]
+    assert simple_gps_data.base_columns == ["geometry", "z", "datetime"]
 
 
 def test_equal_track(simple_gps_data):
@@ -126,6 +129,10 @@ def test_poi(simple_poi_data, simple_poi_raw_data):
     assert np.equal(simple_poi_data.y, y).all()
     assert np.equal(simple_poi_data.radius, r).all()
     assert simple_poi_data.crs.to_epsg() == 4326
+    with pytest.raises(AttributeError):
+        simple_poi_data.z
+    with pytest.raises(AttributeError):
+        simple_poi_data.t
 
 
 def test_mask(simple_poi_data, simple_gps_data):
@@ -151,6 +158,23 @@ def test_mask_polygon(simple_poi_data, simple_gps_data):
 
     # Drop from masks
     N = simple_gps_data.drop_from_mask(polygons)
+
+    # Check results
+    assert N == 2
+    assert len(simple_gps_data) == 1
+    assert np.equal(simple_gps_data.xy, [[0, 1]]).all()
+    assert simple_gps_data.index == pd.core.indexes.range.RangeIndex(0, 1, 1)
+
+
+def test_mask_series(simple_poi_data, simple_gps_data):
+    assert len(simple_gps_data) == 3
+
+    # Create small polygons aroung PoI points
+    polygons = simple_poi_data.buffer(simple_poi_data.radius).to_frame("geometry")
+    polygons.crs = simple_poi_data.crs
+
+    # Drop from masks
+    N = simple_gps_data.drop_from_mask(polygons.geometry)
 
     # Check results
     assert N == 2

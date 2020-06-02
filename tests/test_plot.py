@@ -3,6 +3,7 @@ import types
 
 import cartopy.io.img_tiles as cimgt
 import numpy as np
+from shapely.geometry import Point
 
 import gps_data_analyzer as gda
 
@@ -31,6 +32,17 @@ def background():
 def test_plot(simple_gps_data):
     # Simple plot
     fig, ax = gda.plot_utils.plot(simple_gps_data, var="z", show=False)
+    return fig
+
+
+@pytest.mark.mpl_image_compare(filename='test_plot.png')
+def test_plot_clip(simple_gps_data):
+    simple_gps_data.loc[0, "geometry"] = Point(0, 1, -1000)
+    simple_gps_data.loc[2, "geometry"] = Point(0, 1, 1000)
+
+    # Simple plot
+    fig, ax = gda.plot_utils.plot(
+        simple_gps_data, var="z", vmin=0, vmax=200, show=False)
     return fig
 
 

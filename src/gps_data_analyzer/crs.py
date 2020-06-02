@@ -20,11 +20,11 @@ import pyproj
 try:
     from osgeo import osr
     has_gdal = True
-except ImportError:
+except ImportError:  # pragma: no cover
     has_gdal = False
 
 
-def check_crs(crs, raise_on_error=False):
+def check_crs(crs, raise_on_error=False):  # pragma: no cover
     """Checks if the crs represents a valid grid, projection or ESPG string.
     Examples
     --------
@@ -84,7 +84,7 @@ def check_crs(crs, raise_on_error=False):
     return out
 
 
-def proj_is_latlong(proj):
+def proj_is_latlong(proj):  # pragma: no cover
     """Shortcut function because of deprecation."""
 
     try:
@@ -93,7 +93,7 @@ def proj_is_latlong(proj):
         return proj.crs.is_geographic
 
 
-def proj_to_cartopy(proj):
+def proj_to_cartopy(proj):  # pragma: no cover
     """Converts a pyproj.Proj to a cartopy.crs.Projection
     Parameters
     ----------

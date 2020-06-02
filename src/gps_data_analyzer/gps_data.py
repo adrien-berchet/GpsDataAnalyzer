@@ -136,7 +136,7 @@ class _GpsBase(gpd.GeoDataFrame):
         if self._has_z:
             return self.geometry.apply(lambda x: x.z)
         else:
-            return self.__getattr__("z")
+            return self._return_attr("z")
 
     @property
     def t(self):
@@ -150,15 +150,21 @@ class _GpsBase(gpd.GeoDataFrame):
             attr = self._default_time_col
         else:
             attr = "t"
-        return self.__getattr__(attr)
+        return self._return_attr(attr)
 
     @property
     def xy(self):
         """``numpy.array``: Array with a (x,y) couple of each point."""
         return np.vstack([self.geometry.x, self.geometry.y]).T
 
+    def _return_attr(self, attr):
+        try:
+            return self.__getattr__(attr)
+        except RecursionError:
+            raise AttributeError("This object has no '{}' attribute".format(attr))
+
     @property
-    def _base_cols(self):
+    def base_columns(self):
         base_cols = ["geometry"]
         if self._has_z:
             base_cols.append(self._default_z_col)
@@ -390,11 +396,11 @@ def concatenate(data_sets, crs=None):
     Returns:
         The new data set.
     """
-    if len(data_sets) < 1:
+    if len(data_sets) < 1:  # pragma: no cover
         raise ValueError("No data provided in 'data_sets' argument")
     if crs is None:
         for i in data_sets:
-            if crs is not None and i.crs != crs:
+            if crs is not None and i.crs != crs:  # pragma: no cover
                 raise ValueError(
                     "If all sets do not have the same CRS, use the 'crs' parameter")
             crs = i.crs

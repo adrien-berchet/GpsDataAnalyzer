@@ -308,16 +308,16 @@ def heatmap(
         if X.size >= 4:
             dx = X[1, 0] - X[0, 0]
         else:
-            dx = 0
+            dx = 0  # pragma: no cover - TODO: should be tested
         if Y.size >= 4:
             dy = Y[0, 1] - Y[0, 0]
         else:
-            dy = 0
+            dy = 0  # pragma: no cover - TODO: should be tested
         mesh_size = max(dx, dy)
         if mesh_size > 0:
             kernel_size = 2.0 * mesh_size
         else:
-            kernel_size = 1
+            kernel_size = 1  # pragma: no cover - TODO: should be tested
 
     kde = np.zeros(len(tree.data))
     for num, (_x, _y, _w) in enumerate(zip(x, y, weight)):  # TODO: optimize this loop

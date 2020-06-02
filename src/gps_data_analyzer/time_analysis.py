@@ -28,7 +28,7 @@ def compute_rest_time(gps_data, radius):
         dt = max(t_i1, t_i2) - min(t_i1, t_i2)
         dd = abs(d_i1 - d_i2)
         if dd == 0:
-            return pd.Timedelta(0)
+            return dt
         else:
             return min(1.0, abs(d_i1 - max_radius) / dd) * dt
 

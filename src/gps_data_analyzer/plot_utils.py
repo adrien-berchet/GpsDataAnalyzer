@@ -104,7 +104,7 @@ def setup_axis(
         # Create a GeoAxes in the tile's projection.
         ax = fig.add_subplot(1, 1, 1, projection=projection)
     else:
-        fig = None
+        fig = None  # pragma: no cover
 
     # Limit the extent of the map to the min/max coords
     if extent is not None:
@@ -185,7 +185,7 @@ def plot(
     # Clip values
     if vmin is not None or vmax is not None:
         data = data.copy()
-        data[var] = data[var].clip(vmin, vmax, inplace=True)
+        data[var] = data.__getattr__(var).clip(vmin, vmax)
 
     # Add data
     if var not in data.columns:
