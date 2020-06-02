@@ -129,6 +129,7 @@ def test_poi(simple_poi_data, simple_poi_raw_data):
     assert np.equal(simple_poi_data.y, y).all()
     assert np.equal(simple_poi_data.radius, r).all()
     assert simple_poi_data.crs.to_epsg() == 4326
+    assert simple_poi_data.base_columns == ["geometry"]
     with pytest.raises(AttributeError):
         simple_poi_data.z
     with pytest.raises(AttributeError):
@@ -137,6 +138,20 @@ def test_poi(simple_poi_data, simple_poi_raw_data):
 
 def test_mask(simple_poi_data, simple_gps_data):
     assert len(simple_gps_data) == 3
+
+    # Drop from masks
+    N = simple_gps_data.drop_from_mask(simple_poi_data)
+
+    # Check results
+    assert N == 2
+    assert len(simple_gps_data) == 1
+    assert np.equal(simple_gps_data.xy, [[0, 1]]).all()
+    assert simple_gps_data.index == pd.core.indexes.range.RangeIndex(0, 1, 1)
+
+
+def test_mask_no_csr(simple_poi_data, simple_gps_data):
+    assert len(simple_gps_data) == 3
+    simple_gps_data.crs = None
 
     # Drop from masks
     N = simple_gps_data.drop_from_mask(simple_poi_data)

@@ -42,7 +42,7 @@ def add_annotated_points(ax, points, **kwargs):
     pts = points.copy()
 
     # If name column is missing, set IDs as names
-    if "name" not in pts.columns:
+    if "name" not in pts.columns:  # pragma: no cover - Should usually not happen
         pts["name"] = pts.index.astype(str)
 
     # Set default arguments for arrowprops and bbox
@@ -107,7 +107,7 @@ def setup_axis(
         fig = None  # pragma: no cover
 
     # Limit the extent of the map to the min/max coords
-    if extent is not None:
+    if extent is not None:  # pragma: no cover - Should usually not happen
         ax.set_extent(extent, crs=projection)
 
     # Create a terrain background instance

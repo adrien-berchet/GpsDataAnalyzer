@@ -46,6 +46,22 @@ def test_plot_clip(simple_gps_data):
     return fig
 
 
+@pytest.mark.mpl_image_compare(filename='test_plot.png')
+def test_plot_extent(simple_gps_data):
+    simple_gps_data.loc[0, "geometry"] = Point(0, 1, -1000)
+    simple_gps_data.loc[2, "geometry"] = Point(0, 1, 1000)
+
+    # Define extent manually
+    border = 0
+    xmin, ymin, xmax, ymax = simple_gps_data.sindex.bounds
+    extent = (xmin - border, xmax + border, ymin - border, ymax + border)
+
+    # Simple plot
+    fig, ax = gda.plot_utils.plot(
+        simple_gps_data, var="z", vmin=0, vmax=200, show=False, extent=extent)
+    return fig
+
+
 @pytest.mark.mpl_image_compare
 def test_plot_border(simple_gps_data):
     # Plot with border
@@ -61,15 +77,17 @@ def test_plot_cmap(simple_gps_data):
     return fig
 
 
-@pytest.mark.mpl_image_compare
-def test_plot_annotations(simple_gps_data, simple_poi_data):
+@pytest.mark.mpl_image_compare(filename='test_plot_annotations.png')
+@pytest.mark.parametrize("annotation_kwargs", [None, {}])
+def test_plot_annotations(annotation_kwargs, simple_gps_data, simple_poi_data):
     # Plot with cmap
     fig, ax = gda.plot_utils.plot(
         simple_gps_data,
         var="z",
         border=0.02,
         show=False,
-        annotations=simple_poi_data)
+        annotations=simple_poi_data,
+        annotation_kwargs=annotation_kwargs)
     return fig
 
 
@@ -130,14 +148,16 @@ def test_plot_heatmap(simple_gps_data):
     return fig
 
 
-@pytest.mark.mpl_image_compare
-def test_plot_heatmap_annotations(simple_gps_data, simple_poi_data):
+@pytest.mark.mpl_image_compare(filename='test_plot_heatmap_annotations.png')
+@pytest.mark.parametrize("annotation_kwargs", [None, {}])
+def test_plot_heatmap_annotations(annotation_kwargs, simple_gps_data, simple_poi_data):
     # Define raster
     raster = gda.raster_analysis.heatmap(
         simple_gps_data, weight_col="z", nx=15, ny=15, border=0.05)
 
     # Plot raster and annotations
-    fig, ax = raster.plot(show=False, annotations=simple_poi_data)
+    fig, ax = raster.plot(
+        show=False, annotations=simple_poi_data, annotation_kwargs=annotation_kwargs)
 
     # Add track markers
     x = simple_gps_data.x

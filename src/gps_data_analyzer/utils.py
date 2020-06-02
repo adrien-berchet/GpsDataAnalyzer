@@ -22,7 +22,7 @@ def haversine(lat1, lon1, lat2, lon2, to_radians=True, earth_radius=6371e3):
     Returns:
         ``numpy.array``: The distances betwen each couple of points.
     """
-    if to_radians:
+    if to_radians:  # pragma: no cover - TODO: should be tested
         lat1 = np.radians(lat1)
         lon1 = np.radians(lon1)
         lat2 = np.radians(lat2)

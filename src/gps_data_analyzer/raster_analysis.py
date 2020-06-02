@@ -216,7 +216,7 @@ class Raster(object):
         )
 
         # Define CMAP
-        if cmap is None:
+        if cmap is None:  # pragma: no cover - Too simple to test
             cmap = create_transparent_cmap()
 
         # Add raster
@@ -304,7 +304,7 @@ def heatmap(
     tree = spatial.KDTree(positions.T)
 
     # Init sigma if not given
-    if kernel_size is None:
+    if kernel_size is None:  # pragma: no cover - TODO: should be tested
         if X.size >= 4:
             dx = X[1, 0] - X[0, 0]
         else:
