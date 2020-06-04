@@ -54,6 +54,8 @@ def test_save_load_gps_points_crs(simple_gps_raw_data, simple_gps_data, gpkg_fil
         res.velocity.values, [np.nan, 683.6529, 116.4722], equal_nan=True
     )
     assert (res.test_col == 1).all()
+    assert projected.crs.to_epsg() == 2154
+    assert res.crs.to_epsg() == 2154
 
 
 def test_save_load_poi_points(simple_poi_raw_data, simple_poi_data, gpkg_filepath):

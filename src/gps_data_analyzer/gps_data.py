@@ -92,9 +92,18 @@ class _GpsBase(gpd.GeoDataFrame):
         time_sort: bool = True,
         **kwargs
     ) -> '_GpsBase':
-        kwargs["crs"] = kwargs.get("crs", self._default_input_crs)
+
+        # Create a GeoDataFrame
         df = gpd.GeoDataFrame(*args, **kwargs)
 
+        # Set CRS
+        if df.crs is None:
+            try:
+                df.crs = args[0].crs
+            except AttributeError:
+                df.crs = self._default_input_crs
+
+        # Get default values
         x_col = x_col if x_col is not None else self._default_x_col
         y_col = y_col if y_col is not None else self._default_y_col
         z_col = z_col if z_col is not None else self._default_z_col
@@ -103,7 +112,6 @@ class _GpsBase(gpd.GeoDataFrame):
         # Format data
         self._format_data(
             df,
-            kwargs["crs"],
             local_crs,
             x_col,
             y_col,
@@ -191,7 +199,6 @@ class _GpsBase(gpd.GeoDataFrame):
     def _format_data(
         cls,
         df: pd.DataFrame,
-        input_crs: int,
         local_crs: int,
         x_col: str,
         y_col: str,
