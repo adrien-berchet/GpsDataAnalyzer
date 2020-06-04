@@ -9,12 +9,22 @@ import gps_data_analyzer as gda
 
 def test_create_track(simple_gps_data, simple_gps_raw_data):
     x, y, z, t = simple_gps_raw_data
+    df = pd.DataFrame({"x": x, "y": y, "z": z, "t": t})
+    new = gda.GpsPoints(df, x_col="x", y_col="y", z_col="z", time_col="t")
 
-    assert simple_gps_data.x.tolist() == x
-    assert simple_gps_data.y.tolist() == y
-    assert simple_gps_data.z.tolist() == z
-    assert simple_gps_data.t.tolist() == [pd.to_datetime(i) for i in t]
-    assert simple_gps_data.base_columns == ["geometry", "z", "datetime"]
+    assert new.x.tolist() == x
+    assert new.y.tolist() == y
+    assert new.z.tolist() == z
+    assert new.t.tolist() == [pd.to_datetime(i) for i in t]
+    assert new.base_columns == ["geometry", "z", "datetime"]
+
+    new_proj = gda.GpsPoints(new, local_crs=4326)
+
+    assert new_proj.x.tolist() == x
+    assert new_proj.y.tolist() == y
+    assert new_proj.z.tolist() == z
+    assert new_proj.t.tolist() == [pd.to_datetime(i) for i in t]
+    assert new_proj.base_columns == ["geometry", "z", "datetime"]
 
 
 def test_equal_track(simple_gps_data):
@@ -33,6 +43,45 @@ def test_copy_track(simple_gps_data):
     new = simple_gps_data.copy()
 
     assert new.equals(simple_gps_data)
+    assert id(new) != id(simple_gps_data)
+
+    new["dt"] *= 2
+    assert new.equals(simple_gps_data)
+
+    deep_new = simple_gps_data.copy(deep=True)
+
+    assert deep_new.equals(simple_gps_data)
+    assert id(deep_new) != id(simple_gps_data)
+
+    deep_new["dt"] *= 2
+    assert not deep_new.equals(simple_gps_data)
+
+
+def test_track_projection(simple_gps_data):
+    new = simple_gps_data.copy()
+
+    assert new.equals(simple_gps_data)
+    assert not new.to_crs(2154).equals(simple_gps_data)
+
+    new_proj = new.to_crs(4326)
+    assert new_proj.geom_almost_equals(simple_gps_data).all()
+
+    new.to_crs(4326, inplace=True)
+    assert new.geom_almost_equals(simple_gps_data).all()
+
+    deep_new = simple_gps_data.copy(deep=True)
+
+    assert deep_new.equals(simple_gps_data)
+    assert not deep_new.to_crs(2154).equals(simple_gps_data)
+
+    deep_new.to_crs(2154, inplace=True)
+    assert not deep_new.equals(simple_gps_data)
+
+    deep_new_proj = deep_new.to_crs(4326)
+    assert deep_new_proj.geom_almost_equals(simple_gps_data).all()
+
+    deep_new.to_crs(4326, inplace=True)
+    assert deep_new.geom_almost_equals(simple_gps_data).all()
 
 
 def test_create_track_sort(simple_gps_df, simple_gps_raw_data):
@@ -239,8 +288,8 @@ def test_concatenate(simple_gps_data):
 
 
 def test_concatenate_csr(simple_gps_data):
-    a = gda.GpsPoints(simple_gps_data.copy(), local_crs=3857)
-    b = gda.GpsPoints(simple_gps_data.copy(), local_crs=2154)
+    a = simple_gps_data.to_crs(3857)
+    b = simple_gps_data.to_crs(2154)
     res = gda.concatenate([a, b], crs=4326)
 
     assert np.allclose(res.x.tolist(), simple_gps_data.x.tolist() * 2)
