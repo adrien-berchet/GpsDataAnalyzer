@@ -1,6 +1,7 @@
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+from pyproj.crs import CRS
 from shapely.geometry import LineString
 
 from .utils import haversine
@@ -10,7 +11,7 @@ from . import io
 DEFAULT_TIME_FORMAT = "%Y/%m/%d-%H:%M:%S"
 
 
-def _convert_time(series, format=DEFAULT_TIME_FORMAT):
+def _convert_time(series, format: str = DEFAULT_TIME_FORMAT):
     """Convert a ``pandas.Series`` containing timestamps as strings.
 
     Args:
@@ -83,18 +84,17 @@ class _GpsBase(gpd.GeoDataFrame):
     def __init__(
         self,
         *args,
-        local_crs=None,
-        x_col=None,
-        y_col=None,
-        z_col=None,
-        time_col=None,
-        time_sort=True,
+        local_crs: int = None,
+        x_col: str = None,
+        y_col: str = None,
+        z_col: str = None,
+        time_col: str = None,
+        time_sort: bool = True,
         **kwargs
-    ):
+    ) -> '_GpsBase':
         kwargs["crs"] = kwargs.get("crs", self._default_input_crs)
-        super(_GpsBase, self).__init__(*args, **kwargs)
+        df = gpd.GeoDataFrame(*args, **kwargs)
 
-        local_crs = local_crs if local_crs is not None else self.crs
         x_col = x_col if x_col is not None else self._default_x_col
         y_col = y_col if y_col is not None else self._default_y_col
         z_col = z_col if z_col is not None else self._default_z_col
@@ -102,6 +102,7 @@ class _GpsBase(gpd.GeoDataFrame):
 
         # Format data
         self._format_data(
+            df,
             kwargs["crs"],
             local_crs,
             x_col,
@@ -113,20 +114,22 @@ class _GpsBase(gpd.GeoDataFrame):
 
         # Compute normalized data
         if self._has_time:
-            self._normalize_data()
+            self._normalize_data(df)
+
+        super(_GpsBase, self).__init__(df, crs=df.crs)
 
     @property
-    def x(self):
+    def x(self) -> pd.Series:
         """``pandas.Series``: Get X coordinates from the geometry."""
         return self.geometry.x
 
     @property
-    def y(self):
+    def y(self) -> pd.Series:
         """``pandas.Series``: Get Y coordinates from the geometry."""
         return self.geometry.y
 
     @property
-    def z(self):
+    def z(self) -> pd.Series:
         """Get Z coordinates if :py:attr:`~_has_z` is ``True`` or the `z` column
         otherwise.
 
@@ -139,7 +142,7 @@ class _GpsBase(gpd.GeoDataFrame):
             return self._return_attr("z")
 
     @property
-    def t(self):
+    def t(self) -> pd.Series:
         """Get timestamps if :py:attr:`~_has_time` is ``True`` or the `t` column
         otherwise.
 
@@ -153,18 +156,18 @@ class _GpsBase(gpd.GeoDataFrame):
         return self._return_attr(attr)
 
     @property
-    def xy(self):
+    def xy(self) -> np.array:
         """``numpy.array``: Array with a (x,y) couple of each point."""
         return np.vstack([self.geometry.x, self.geometry.y]).T
 
-    def _return_attr(self, attr):
+    def _return_attr(self, attr) -> pd.Series:
         try:
             return self.__getattr__(attr)
         except RecursionError:
             raise AttributeError("This object has no '{}' attribute".format(attr))
 
     @property
-    def base_columns(self):
+    def base_columns(self) -> list:
         base_cols = ["geometry"]
         if self._has_z:
             base_cols.append(self._default_z_col)
@@ -172,20 +175,30 @@ class _GpsBase(gpd.GeoDataFrame):
             base_cols.append(self._default_time_col)
         return base_cols
 
-    def copy(self):
-        """Return a copy of the current object."""
-        return self.__class__(self, crs=self.crs)
+    def copy(self, deep: bool = False):
+        """Return a copy of the current object.
 
+        Args:
+            deep (bool): Make a deep copy, including a copy of the data and the indices.
+                With ``deep=False`` neither the indices nor the data are copied.
+        """
+        return self.__class__(
+            super(_GpsBase, self).copy(deep=deep),
+            crs=self.crs,
+            time_sort=False)
+
+    @classmethod
     def _format_data(
-        self,
-        input_crs,
-        local_crs,
-        x_col,
-        y_col,
-        z_col=None,
-        time_col=None,
-        time_sort=True,
-    ):
+        cls,
+        df: pd.DataFrame,
+        input_crs: int,
+        local_crs: int,
+        x_col: str,
+        y_col: str,
+        z_col: str = None,
+        time_col: str = None,
+        time_sort: bool = True,
+    ) -> None:
         """Format a ``pandas.DataFrame`` or ``geopandas.GeoDataFrame``.
 
         Args:
@@ -213,61 +226,74 @@ class _GpsBase(gpd.GeoDataFrame):
         """
 
         # Convert time and sort by time
-        if self._has_time:
-            t_col = self[time_col]
+        if cls._has_time and time_col in df.columns:
+            t_col = df[time_col]
             if not np.issubdtype(t_col.dtype, np.datetime64):
-                t_col = _convert_time(t_col, format=self.datetime_format)
-            self[self._default_time_col] = t_col
-            if self._default_time_col != time_col:
-                self.drop(columns=[time_col], inplace=True)
+                t_col = _convert_time(t_col, format=cls.datetime_format)
+            df[cls._default_time_col] = t_col
+            if cls._default_time_col != time_col:
+                df.drop(columns=[time_col], inplace=True)
             if time_sort:
-                self.sort_values(self._default_time_col, inplace=True)
+                df.sort_values(cls._default_time_col, inplace=True)
 
         # Create geometry from coordinates
-        if self._geometry_column_name not in self.columns:
+        if df._geometry_column_name not in df.columns:
             # Drop missing coordinates
-            self.dropna(subset=[x_col, y_col], inplace=True)
+            df.dropna(subset=[x_col, y_col], inplace=True)
 
             # Set geometry column
-            self.geometry = gpd.points_from_xy(
-                self[x_col], self[y_col], self[z_col] if self._has_z else None)
+            df.geometry = gpd.points_from_xy(
+                df[x_col], df[y_col], df[z_col] if cls._has_z else None)
 
             # Drop useless columns
             dropped_cols = [x_col, y_col]
-            if self._has_z:
+            if cls._has_z:
                 dropped_cols.append(z_col)
-            self.drop(columns=dropped_cols, inplace=True)
+            df.drop(columns=dropped_cols, inplace=True)
 
-        # Reset index
-        self.reset_index(drop=True, inplace=True)
+            # Reset index
+            df.reset_index(drop=True, inplace=True)
 
         # Project data
-        if local_crs is not None and local_crs != self.crs.to_epsg():
-            self.to_crs(local_crs, inplace=True)
+        if local_crs is not None:
+            self_crs = CRS(df.crs)
+            local_crs = CRS(local_crs)
+            if local_crs != self_crs:
+                df.to_crs(local_crs, inplace=True)
 
-    def _normalize_data(self):
+    @classmethod
+    def _normalize_data(cls, df) -> None:
         """Conpute time delta between consecutive points (in s)."""
-        if self._default_dt_col not in self.columns:
-            self[self._default_dt_col] = (
-                self[self._default_time_col] - self[self._default_time_col].shift()
+        if (
+            cls._default_dt_col not in df.columns
+            and cls._default_time_col in df.columns
+        ):
+            df[cls._default_dt_col] = (
+                df[cls._default_time_col] - df[cls._default_time_col].shift()
             ).values / pd.Timedelta(1, "s")
 
         # Conpute distance between consecutive points (in m)
-        if self._default_dist_col not in self.columns:
-            shifted = self.geometry.shift()
-            if self.crs.to_epsg() == 4326 and self._use_haversine:
-                self[self._default_dist_col] = haversine(
-                    self.y, self.x, shifted.y, shifted.x)
+        if cls._default_dist_col not in df.columns:
+            shifted = df.geometry.shift()
+            # TODO: use crs.is_latlon or something like this?
+            if df.crs.to_epsg() == 4326 and cls._use_haversine:
+                df[cls._default_dist_col] = haversine(
+                    df.geometry.y, df.geometry.x,
+                    shifted.geometry.y, shifted.geometry.x)
             else:
-                self[self._default_dist_col] = self.distance(shifted)
+                df[cls._default_dist_col] = df.distance(shifted)
 
         # Conpute velocity between consecutive points (in m/s)
-        if self._default_velocity_col not in self.columns:
-            self[self._default_velocity_col] = (
-                self[self._default_dist_col] / self[self._default_dt_col]
+        if (
+            cls._default_velocity_col not in df.columns
+            and cls._default_dist_col in df.columns
+            and cls._default_dt_col in df.columns
+        ):
+            df[cls._default_velocity_col] = (
+                df[cls._default_dist_col] / df[cls._default_dt_col]
             )
 
-    def add_attribute(self, attr, name=None):
+    def add_attribute(self, attr: pd.Series, name: str = None) -> None:
         """Add a column to the internal ``geopandas.GeoDataFrame``.
 
         Args:
@@ -287,7 +313,7 @@ class _GpsBase(gpd.GeoDataFrame):
         else:
             self[attr.name] = attr
 
-    def segments(self):
+    def segments(self) -> gpd.GeoDataFrame:
         """Build segments from the consecutive points.
 
         Returns:
@@ -308,7 +334,7 @@ class _GpsBase(gpd.GeoDataFrame):
         ].join(lines, how="right")
         return gpd.GeoDataFrame(segments, crs=self.crs, geometry="geometry")
 
-    def drop_from_mask(self, mask):
+    def drop_from_mask(self, mask: gpd.GeoDataFrame) -> int:
         """Drop points contained in the given mask.
 
         Args:
@@ -330,7 +356,7 @@ class _GpsBase(gpd.GeoDataFrame):
 
         # Project the mask if needed
         if self.crs is not None:
-            mask = mask.to_crs(self.crs)
+            mask = mask.to_crs(self.crs, inplace=False)
 
         # Get the points included in masks
         in_mask_pts = pd.Series(np.zeros(len(self)), dtype=bool)
@@ -354,7 +380,7 @@ class GpsPoints(_GpsBase):
     _has_time = True
 
 
-def load_gps_points(path):
+def load_gps_points(path: str) -> GpsPoints:
     """Load :py:obj:`GpsPoints` from a file.
 
     Args:
@@ -373,7 +399,7 @@ class PoiPoints(_GpsBase):
     _has_time = False
 
 
-def load_poi_points(path):
+def load_poi_points(path: str) -> PoiPoints:
     """Load :py:obj:`PoiPoints` from a file.
 
     Args:
@@ -386,7 +412,7 @@ def load_poi_points(path):
     return PoiPoints(data)
 
 
-def concatenate(data_sets, crs=None):
+def concatenate(data_sets: list, crs: int = None) -> GpsPoints:
     """Concatenate several data sets.
 
     Args:
