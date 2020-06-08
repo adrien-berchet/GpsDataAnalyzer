@@ -275,7 +275,9 @@ class Raster(object):
 
     def save(self, path):
         # Create directory if it does not exist
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        dirname = os.path.dirname(path)
+        if dirname:  # pragma: no cover - Not worth testing
+            os.makedirs(dirname, exist_ok=True)
 
         # Create a temporary directory
         with tempfile.TemporaryDirectory() as tmpdirname:
