@@ -1,3 +1,8 @@
+import json
+import os
+import tempfile
+import zipfile
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pyproj
@@ -37,10 +42,10 @@ class Extent(object):
         self.inner_xmax = xmax
         self.inner_ymin = ymin
         self.inner_ymax = ymax
-        self.xmin = xmin - border
-        self.xmax = xmax + border
-        self.ymin = ymin - border
-        self.ymax = ymax + border
+        # self.xmin = xmin - border
+        # self.xmax = xmax + border
+        # self.ymin = ymin - border
+        # self.ymax = ymax + border
 
     def reset_border(self, border):
         """Define new extent and recalculate the extent according to it.
@@ -49,10 +54,19 @@ class Extent(object):
             border (float): The extra border to add around the data values.
         """
         self.border = border
-        self.xmin = self.inner_xmin - border
-        self.xmax = self.inner_xmax + border
-        self.ymin = self.inner_ymin - border
-        self.ymax = self.inner_ymax + border
+        # self.xmin = self.inner_xmin - border
+        # self.xmax = self.inner_xmax + border
+        # self.ymin = self.inner_ymin - border
+        # self.ymax = self.inner_ymax + border
+
+    def __repr__(self):
+        return json.dumps([
+            self.inner_xmin,
+            self.inner_xmax,
+            self.inner_ymin,
+            self.inner_ymax,
+            self.border,
+        ])
 
     def __iter__(self):
         for i in [self.xmin, self.xmax, self.ymin, self.ymax]:
@@ -60,6 +74,25 @@ class Extent(object):
 
     def __getitem__(self, key):
         return [self.xmin, self.xmax, self.ymin, self.ymax][key]
+
+    def __eq__(self, other):
+        return list(self) == list(other) and self.border == other.border
+
+    @property
+    def xmin(self):
+        return self.inner_xmin - self.border
+
+    @property
+    def xmax(self):
+        return self.inner_xmax + self.border
+
+    @property
+    def ymin(self):
+        return self.inner_ymin - self.border
+
+    @property
+    def ymax(self):
+        return self.inner_ymax + self.border
 
     def mesh(self, mesh_size=None, x_size=None, y_size=None, nx=None, ny=None):
         """Create a mesh in the current extent.
@@ -239,6 +272,84 @@ class Raster(object):
             plt.show()  # pragma: no cover
         else:
             return fig, ax
+
+    def save(self, path):
+        # Create directory if it does not exist
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        # Create a temporary directory
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            # Save to GeoJSON
+            X_file = os.path.join(tmpdirname, "X.npy")
+            Y_file = os.path.join(tmpdirname, "Y.npy")
+            values_file = os.path.join(tmpdirname, "values.npy")
+            np.save(X_file, self.X, allow_pickle=False)
+            np.save(Y_file, self.Y, allow_pickle=False)
+            np.save(values_file, self.values, allow_pickle=False)
+
+            # Save metadata
+            metadata = {
+                "crs": self.crs.to_wkt(),
+                "extent": str(self.extent)
+            }
+            metadata_file = os.path.join(tmpdirname, "metadata.json")
+            with open(metadata_file, mode="w") as f:
+                json.dump(metadata, f)
+
+            # Zip the files to the destination
+            zip_file = zipfile.ZipFile(path, 'w', compression=zipfile.ZIP_DEFLATED)
+            with zip_file:
+                zip_file.write(X_file, arcname=os.path.basename(X_file))
+                zip_file.write(Y_file, arcname=os.path.basename(Y_file))
+                zip_file.write(values_file, arcname=os.path.basename(values_file))
+                zip_file.write(metadata_file, arcname=os.path.basename(metadata_file))
+
+    @staticmethod
+    def _load(path):
+        # Create a temporary directory
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            # Extract the Zip file
+            zip_file = zipfile.ZipFile(path, 'r', compression=zipfile.ZIP_DEFLATED)
+            zip_file.extractall(path=tmpdirname)
+
+            # Load data
+            X_file = os.path.join(tmpdirname, "X.npy")
+            Y_file = os.path.join(tmpdirname, "Y.npy")
+            values_file = os.path.join(tmpdirname, "values.npy")
+            X = np.load(X_file, allow_pickle=False)
+            Y = np.load(Y_file, allow_pickle=False)
+            values = np.load(values_file, allow_pickle=False)
+
+            # Load metadata
+            with open(os.path.join(tmpdirname, "metadata.json"), mode="r") as f:
+                metadata = json.load(f)
+
+        # Create CRS object
+        crs_str = metadata.get("crs", None)
+        if crs_str is None:  # pragma: no cover - Hard to test and not important
+            raise ValueError("Could not retrieve the CRS from the raster file")
+        crs = pyproj.CRS.from_wkt(crs_str)
+
+        # Create Extent object
+        extent_str = metadata.get("extent", None)
+        if extent_str is None:  # pragma: no cover - Hard to test and not important
+            raise ValueError("Could not retrieve the extent from the raster file")
+        extent = Extent(*json.loads(extent_str))
+
+        # If everything could be imported properly, the new object is returned
+        return Raster(X, Y, values, extent, crs)
+
+
+def load_raster(path: str) -> Raster:
+    """Load :py:obj:`Raster` from a file.
+
+    Args:
+        path (str): The path to the file.
+
+    Returns:
+        :py:obj:`Raster`: The data loaded.
+    """
+    return Raster._load(path)
 
 
 def heatmap(
