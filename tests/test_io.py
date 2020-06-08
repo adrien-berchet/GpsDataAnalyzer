@@ -79,3 +79,16 @@ def test_save_load_poi_points(simple_poi_raw_data, simple_poi_data, gpkg_filepat
     assert "dt" not in poi.columns
     assert "dist" not in poi.columns
     assert "velocity" not in poi.columns
+
+
+def test_save_load_raster(simple_gps_data, zrd_filepath):
+    raster = gda.raster_analysis.heatmap(simple_gps_data, mesh_size=0.1)
+
+    raster.save(zrd_filepath)
+    res = gda.load_raster(zrd_filepath)
+
+    assert np.array_equal(raster.X, res.X)
+    assert np.array_equal(raster.Y, res.Y)
+    assert np.array_equal(raster.values, res.values)
+    assert raster.extent == res.extent
+    assert raster.crs == res.crs
