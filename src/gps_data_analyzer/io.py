@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import geopandas as gpd
 
@@ -15,6 +17,8 @@ def save(obj, path, mode="w", **kwargs):
         If the GeoPackage exists, it is possible to add a new layer with the 'layer'
         argument.
     """
+    _create_dir(path)
+    _format_ext(path, ".gpkg")
     tmp = obj.copy()
 
     # Convert datetime to string
@@ -50,3 +54,16 @@ def _load(path):
 
     # If everything could be imported properly, the new object is returned
     return data
+
+
+def _create_dir(path):
+    # Create directory if it does not exist
+    dirname = os.path.dirname(path)
+    if dirname:  # pragma: no cover - Not worth testing
+        os.makedirs(dirname, exist_ok=True)
+
+
+def _format_ext(path, ext):
+    ext = os.path.splitext(path)[-1]
+    if not ext:
+        path += ".zrd"
