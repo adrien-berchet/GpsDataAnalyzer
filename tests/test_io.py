@@ -92,3 +92,13 @@ def test_save_load_raster(simple_gps_data, zrd_filepath):
     assert np.array_equal(raster.values, res.values)
     assert raster.extent == res.extent
     assert raster.crs == res.crs
+
+    # Without extension
+    raster.save(zrd_filepath[:-4])
+    res = gda.load_raster(zrd_filepath)
+
+    assert np.array_equal(raster.X, res.X)
+    assert np.array_equal(raster.Y, res.Y)
+    assert np.array_equal(raster.values, res.values)
+    assert raster.extent == res.extent
+    assert raster.crs == res.crs

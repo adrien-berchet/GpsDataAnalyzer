@@ -8,9 +8,11 @@ import numpy as np
 import pyproj
 from scipy import spatial
 
+from .crs import proj_to_cartopy
+from .io import _create_dir
+from .io import _format_ext
 from .plot_utils import add_annotated_points
 from .plot_utils import create_transparent_cmap
-from .crs import proj_to_cartopy
 from .plot_utils import setup_axis
 
 
@@ -275,7 +277,8 @@ class Raster(object):
 
     def save(self, path):
         # Create directory if it does not exist
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        _create_dir(path)
+        _format_ext(path, ".zrd")
 
         # Create a temporary directory
         with tempfile.TemporaryDirectory() as tmpdirname:
