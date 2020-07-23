@@ -44,10 +44,6 @@ class Extent(object):
         self.inner_xmax = xmax
         self.inner_ymin = ymin
         self.inner_ymax = ymax
-        # self.xmin = xmin - border
-        # self.xmax = xmax + border
-        # self.ymin = ymin - border
-        # self.ymax = ymax + border
 
     def reset_border(self, border):
         """Define new extent and recalculate the extent according to it.
@@ -56,10 +52,6 @@ class Extent(object):
             border (float): The extra border to add around the data values.
         """
         self.border = border
-        # self.xmin = self.inner_xmin - border
-        # self.xmax = self.inner_xmax + border
-        # self.ymin = self.inner_ymin - border
-        # self.ymax = self.inner_ymax + border
 
     def __repr__(self):
         return json.dumps([
