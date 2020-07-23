@@ -429,11 +429,11 @@ def concatenate(data_sets: list, crs: int = None) -> GpsPoints:
     Returns:
         The new data set.
     """
-    if len(data_sets) < 1:  # pragma: no cover
+    if len(data_sets) < 1:
         raise ValueError("No data provided in 'data_sets' argument")
     if crs is None:
         for i in data_sets:
-            if crs is not None and i.crs != crs:  # pragma: no cover
+            if crs is not None and i.crs != crs:
                 raise ValueError(
                     "If all sets do not have the same CRS, use the 'crs' parameter")
             crs = i.crs
