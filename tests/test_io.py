@@ -17,7 +17,9 @@ def test_save_load_gps_points(simple_gps_raw_data, simple_gps_data, gpkg_filepat
 
     # Check results
     check_gps_data(res, *simple_gps_raw_data)
+    assert res.equals(simple_gps_data[res.columns])
     assert (res.test_col == 1).all()
+    assert res.crs.to_epsg() == 4326
 
 
 def test_save_load_gps_points_crs(simple_gps_raw_data, simple_gps_data, gpkg_filepath):

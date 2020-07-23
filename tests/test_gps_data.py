@@ -17,11 +17,20 @@ class GpsPointsNoHaversine(gda.GpsPoints):
 def test_create_track(simple_gps_raw_data):
     x, y, z, t, _, _, _ = simple_gps_raw_data
     df = pd.DataFrame({"x": x, "y": y, "z": z, "t": t})
+
+    # Constructor with args
     new = gda.GpsPoints(df, x_col="x", y_col="y", z_col="z", time_col="t")
 
     check_gps_data(new, *simple_gps_raw_data)
     assert new.base_columns == ["geometry", "z", "datetime"]
 
+    # Constructor with kwargs
+    new_kw = gda.GpsPoints(data=df, x_col="x", y_col="y", z_col="z", time_col="t")
+
+    check_gps_data(new_kw, *simple_gps_raw_data)
+    assert new_kw.base_columns == ["geometry", "z", "datetime"]
+
+    # Use projection argument
     new_proj = gda.GpsPoints(new, local_crs=4326)
 
     check_gps_data(new_proj, *simple_gps_raw_data)
@@ -106,7 +115,8 @@ def test_create_track_sort(simple_gps_df, simple_gps_raw_data):
     x, y, z, t, _, _, _ = simple_gps_raw_data
 
     df = simple_gps_df.loc[[2, 0, 1]]
-    res = gda.GpsPoints(df, x_col="x", y_col="y", z_col="z", time_col="t")
+    res = gda.GpsPoints(
+        df, x_col="x", y_col="y", z_col="z", time_col="t", time_sort=True)
 
     check_gps_data(res, *simple_gps_raw_data)
     assert np.equal(res.xy, np.vstack((x, y)).T).all()
@@ -133,7 +143,13 @@ def test_create_track_crs(simple_gps_df, simple_gps_raw_data):
     df["x"] = x_proj
     df["y"] = y_proj
     res = gda.GpsPoints(
-        df, x_col="x", y_col="y", z_col="z", time_col="t", crs=2154, local_crs=4326
+        df,
+        x_col="x",
+        y_col="y",
+        z_col="z",
+        time_col="t",
+        crs=2154,
+        local_crs=4326,
     )
 
     # Check results
@@ -146,7 +162,12 @@ def test_create_track_proj(simple_gps_df, simple_gps_raw_data):
 
     df = simple_gps_df.loc[[2, 0, 1]]
     res = gda.GpsPoints(
-        df, x_col="x", y_col="y", z_col="z", time_col="t", local_crs=2154
+        df,
+        x_col="x",
+        y_col="y",
+        z_col="z",
+        time_col="t",
+        local_crs=2154,
     )
 
     # Compute projected results
