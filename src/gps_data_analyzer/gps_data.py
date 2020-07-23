@@ -63,7 +63,7 @@ class _GpsBase(gpd.GeoDataFrame):
         y_col (str): The name of the column that contains Y coordinates.
         z_col (str): The name of the column that contains Z coordinates.
         time_col (str): The name of the column that contains timestamps.
-        time_sort (bool): Sort data by ascending time (only used when ``_has_z`` is
+        time_sort (bool): Sort data by ascending time (only used when ``_has_time`` is
             True).
     """
 
@@ -93,38 +93,58 @@ class _GpsBase(gpd.GeoDataFrame):
         **kwargs
     ) -> '_GpsBase':
 
+        # Get data
+        data = kwargs.get("data", None)
+        if data is None and len(args) > 0:
+            data = args[0]
+        if isinstance(data, (_GpsBase, pd.core.internals.managers.BlockManager)):
+            is_base = True
+        else:
+            is_base = False
+
         # Create a GeoDataFrame
         df = gpd.GeoDataFrame(*args, **kwargs)
 
         # Set CRS
         if df.crs is None:
             try:
-                df.crs = args[0].crs
+                df.crs = data.crs
             except AttributeError:
                 df.crs = self._default_input_crs
 
-        # Get default values
-        x_col = x_col if x_col is not None else self._default_x_col
-        y_col = y_col if y_col is not None else self._default_y_col
-        z_col = z_col if z_col is not None else self._default_z_col
-        time_col = time_col if time_col is not None else self._default_time_col
+        if not is_base:
+            # Get default values
+            x_col = x_col if x_col is not None else self._default_x_col
+            y_col = y_col if y_col is not None else self._default_y_col
+            z_col = z_col if z_col is not None else self._default_z_col
+            time_col = time_col if time_col is not None else self._default_time_col
 
-        # Format data
-        self._format_data(
-            df,
-            local_crs,
-            x_col,
-            y_col,
-            z_col,
-            time_col,
-            time_sort,
-        )
+            # Format data
+            self._format_data(
+                df,
+                x_col,
+                y_col,
+                z_col,
+                time_col,
+                time_sort,
+            )
+
+        # Project data
+        if local_crs is not None:
+            self_crs = CRS(df.crs)
+            local_crs = CRS(local_crs)
+            if local_crs != self_crs:
+                df.to_crs(local_crs, inplace=True)
 
         # Compute normalized data
-        if self._has_time:
+        if not is_base and self._has_time:
             self._normalize_data(df)
 
         super(_GpsBase, self).__init__(df, crs=df.crs)
+
+    @property
+    def _constructor(self):
+        return self.__class__
 
     @property
     def x(self) -> pd.Series:
@@ -199,7 +219,6 @@ class _GpsBase(gpd.GeoDataFrame):
     def _format_data(
         cls,
         df: pd.DataFrame,
-        local_crs: int,
         x_col: str,
         y_col: str,
         z_col: str = None,
@@ -211,16 +230,13 @@ class _GpsBase(gpd.GeoDataFrame):
         Args:
             df (``pandas.DataFrame`` or ``geopandas.GeoDataFrame``): The object to
                 format.
-            input_crs (int): The EPSG code of the input data.
-            local_crs (int or None): The EPSG code of the local projection to which the
-                data will be transformed.
             x_col (str): The name of the column containing X or lon coordinates.
             y_col (str): The name of the column containing Y or lat coordinates.
             z_col (str, optional): The name of the column containing Z coordinates.
             time_col (str, optional): The name of the column containing timestamps.
             keep_cols (:obj:`list` of :obj:`str`, optional): The names of the columns
                 that should be kept (all others will be discarded).
-        time_sort (bool): Sort data by ascending time (only used when ``_has_z`` is
+        time_sort (bool): Sort data by ascending time (only used when ``_has_time`` is
                 True).
 
         Note:
@@ -235,7 +251,7 @@ class _GpsBase(gpd.GeoDataFrame):
         # Convert time and sort by time
         if cls._has_time and time_col in df.columns:
             t_col = df[time_col]
-            if not np.issubdtype(t_col.dtype, np.datetime64):
+            if t_col.dtype == object:
                 t_col = _convert_time(t_col, format=cls.datetime_format)
             df[cls._default_time_col] = t_col
             if cls._default_time_col != time_col:
@@ -246,27 +262,23 @@ class _GpsBase(gpd.GeoDataFrame):
         # Create geometry from coordinates
         if df._geometry_column_name not in df.columns:
             # Drop missing coordinates
-            df.dropna(subset=[x_col, y_col], inplace=True)
+            dropna_cols = list(set([x_col, y_col]).intersection(set(df.columns)))
+            df.dropna(subset=dropna_cols, inplace=True)
 
             # Set geometry column
-            df.geometry = gpd.points_from_xy(
-                df[x_col], df[y_col], df[z_col] if cls._has_z else None)
+            if x_col in df.columns and y_col in df.columns:
+                df.geometry = gpd.points_from_xy(
+                    df[x_col], df[y_col], df[z_col] if cls._has_z else None)
 
             # Drop useless columns
             dropped_cols = [x_col, y_col]
             if cls._has_z:
                 dropped_cols.append(z_col)
+            dropped_cols = list(set(dropped_cols).intersection(set(df.columns)))
             df.drop(columns=dropped_cols, inplace=True)
 
             # Reset index
             df.reset_index(drop=True, inplace=True)
-
-        # Project data
-        if local_crs is not None:
-            self_crs = CRS(df.crs)
-            local_crs = CRS(local_crs)
-            if local_crs != self_crs:
-                df.to_crs(local_crs, inplace=True)
 
     @classmethod
     def _normalize_data(cls, df) -> None:
@@ -280,7 +292,10 @@ class _GpsBase(gpd.GeoDataFrame):
             ).values / pd.Timedelta(1, "s")
 
         # Conpute distance between consecutive points (in m)
-        if cls._default_dist_col not in df.columns:
+        if (
+            cls._default_dist_col not in df.columns
+            and df._geometry_column_name in df.columns
+        ):
             shifted = df.geometry.shift()
             # TODO: use crs.is_latlon or something like this?
             if df.crs.to_epsg() == 4326 and cls._use_haversine:
@@ -380,6 +395,22 @@ class _GpsBase(gpd.GeoDataFrame):
 
         return N
 
+    def equals(self, other: gpd.GeoDataFrame) -> bool:
+        """Test whether self and other contain the same elements.
+
+        Args:
+            other (:obj:`geopandas.GeoDataFrame`): The other object to be compared with
+                self.
+
+        Note:
+            The two objects are converted to ``geopandas.GeoDataFrame`` then they are
+                compared using the ``equals`` method.
+
+        Returns:
+            bool: True if all elements are the same in both objects, False otherwise.
+        """
+        return gpd.GeoDataFrame(self).equals(gpd.GeoDataFrame(other))
+
 
 class GpsPoints(_GpsBase):
     """Class to store GPS points with Z coordinates and timestamps."""
@@ -429,11 +460,11 @@ def concatenate(data_sets: list, crs: int = None) -> GpsPoints:
     Returns:
         The new data set.
     """
-    if len(data_sets) < 1:  # pragma: no cover
+    if len(data_sets) < 1:
         raise ValueError("No data provided in 'data_sets' argument")
     if crs is None:
         for i in data_sets:
-            if crs is not None and i.crs != crs:  # pragma: no cover
+            if crs is not None and i.crs != crs:
                 raise ValueError(
                     "If all sets do not have the same CRS, use the 'crs' parameter")
             crs = i.crs

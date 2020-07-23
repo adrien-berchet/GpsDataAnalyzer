@@ -6,24 +6,51 @@ import pyproj
 
 import gps_data_analyzer as gda
 
+from . import check_gps_data
 
-def test_create_track(simple_gps_data, simple_gps_raw_data):
-    x, y, z, t = simple_gps_raw_data
+
+class GpsPointsNoHaversine(gda.GpsPoints):
+    """Class to test distance computation without Haversine."""
+    _use_haversine = False
+
+
+def test_create_track(simple_gps_raw_data):
+    x, y, z, t, _, _, _ = simple_gps_raw_data
     df = pd.DataFrame({"x": x, "y": y, "z": z, "t": t})
+
+    # Constructor with args
     new = gda.GpsPoints(df, x_col="x", y_col="y", z_col="z", time_col="t")
 
-    assert new.x.tolist() == x
-    assert new.y.tolist() == y
-    assert new.z.tolist() == z
-    assert new.t.tolist() == [pd.to_datetime(i) for i in t]
+    check_gps_data(new, *simple_gps_raw_data)
+    assert new.base_columns == ["geometry", "z", "datetime"]
+
+    # Constructor with kwargs
+    new_kw = gda.GpsPoints(data=df, x_col="x", y_col="y", z_col="z", time_col="t")
+
+    check_gps_data(new_kw, *simple_gps_raw_data)
+    assert new_kw.base_columns == ["geometry", "z", "datetime"]
+
+    # Use projection argument
+    new_proj = gda.GpsPoints(new, local_crs=4326)
+
+    check_gps_data(new_proj, *simple_gps_raw_data)
+    assert new_proj.base_columns == ["geometry", "z", "datetime"]
+
+
+def test_create_track_no_haversine(simple_gps_raw_data):
+    x, y, z, t, dt, _, _ = simple_gps_raw_data
+    df = pd.DataFrame({"x": x, "y": y, "z": z, "t": t})
+    new = GpsPointsNoHaversine(df, x_col="x", y_col="y", z_col="z", time_col="t")
+
+    dist = [float('nan'), 0.141421, 0.141421]
+    vel = [float('nan'), 0.00614875462, 0.001047565602]
+
+    check_gps_data(new, x, y, z, t, dt, dist, vel)
     assert new.base_columns == ["geometry", "z", "datetime"]
 
     new_proj = gda.GpsPoints(new, local_crs=4326)
 
-    assert new_proj.x.tolist() == x
-    assert new_proj.y.tolist() == y
-    assert new_proj.z.tolist() == z
-    assert new_proj.t.tolist() == [pd.to_datetime(i) for i in t]
+    check_gps_data(new, x, y, z, t, dt, dist, vel)
     assert new_proj.base_columns == ["geometry", "z", "datetime"]
 
 
@@ -85,26 +112,26 @@ def test_track_projection(simple_gps_data):
 
 
 def test_create_track_sort(simple_gps_df, simple_gps_raw_data):
-    x, y, z, t = simple_gps_raw_data
+    x, y, z, t, _, _, _ = simple_gps_raw_data
 
     df = simple_gps_df.loc[[2, 0, 1]]
-    res = gda.GpsPoints(df, x_col="x", y_col="y", z_col="z", time_col="t")
+    res = gda.GpsPoints(
+        df, x_col="x", y_col="y", z_col="z", time_col="t", time_sort=True)
 
-    assert res.x.tolist() == x
-    assert res.y.tolist() == y
+    check_gps_data(res, *simple_gps_raw_data)
     assert np.equal(res.xy, np.vstack((x, y)).T).all()
-    assert res.z.tolist() == z
-    assert res.t.tolist() == [pd.to_datetime(i) for i in t]
     assert res.crs.to_epsg() == 4326
-    assert np.allclose(res.dt.values, [np.nan, 23.0, 135.0], equal_nan=True)
-    assert np.allclose(res.dist.values, [np.nan, 15724.02, 15723.75], equal_nan=True)
-    assert np.allclose(
-        res.velocity.values, [np.nan, 683.6529, 116.4722], equal_nan=True
-    )
+
+    res_no_sort = gda.GpsPoints(
+        df, x_col="x", y_col="y", z_col="z", time_col="t", time_sort=False)
+
+    x, y, z, t, _ = df.values.T.tolist()
+    check_gps_data(res_no_sort, x, y, z, t)
+    assert res_no_sort.crs.to_epsg() == 4326
 
 
 def test_create_track_crs(simple_gps_df, simple_gps_raw_data):
-    x, y, z, t = simple_gps_raw_data
+    x, y, z, t, _, _, _ = simple_gps_raw_data
 
     # Compute projected coordinates
     proj = pyproj.Proj(2154)
@@ -116,28 +143,31 @@ def test_create_track_crs(simple_gps_df, simple_gps_raw_data):
     df["x"] = x_proj
     df["y"] = y_proj
     res = gda.GpsPoints(
-        df, x_col="x", y_col="y", z_col="z", time_col="t", crs=2154, local_crs=4326
+        df,
+        x_col="x",
+        y_col="y",
+        z_col="z",
+        time_col="t",
+        crs=2154,
+        local_crs=4326,
     )
 
     # Check results
-    assert np.allclose(res.x, x)
-    assert np.allclose(res.y, y)
-    assert res.z.tolist() == z
-    assert res.t.tolist() == [pd.to_datetime(i) for i in t]
+    check_gps_data(res, *simple_gps_raw_data)
     assert res.crs.to_epsg() == 4326
-    assert np.allclose(res.dt.values, [np.nan, 23.0, 135.0], equal_nan=True)
-    assert np.allclose(res.dist.values, [np.nan, 15724.02, 15723.75], equal_nan=True)
-    assert np.allclose(
-        res.velocity.values, [np.nan, 683.6529, 116.4722], equal_nan=True
-    )
 
 
 def test_create_track_proj(simple_gps_df, simple_gps_raw_data):
-    x, y, z, t = simple_gps_raw_data
+    x, y, z, t, dt, _, _ = simple_gps_raw_data
 
     df = simple_gps_df.loc[[2, 0, 1]]
     res = gda.GpsPoints(
-        df, x_col="x", y_col="y", z_col="z", time_col="t", local_crs=2154
+        df,
+        x_col="x",
+        y_col="y",
+        z_col="z",
+        time_col="t",
+        local_crs=2154,
     )
 
     # Compute projected results
@@ -147,16 +177,10 @@ def test_create_track_proj(simple_gps_df, simple_gps_raw_data):
     y_proj = [i[1] for i in xy_proj]
 
     # Check results
-    assert res.x.tolist() == x_proj
-    assert res.y.tolist() == y_proj
-    assert res.z.tolist() == z
-    assert res.t.tolist() == [pd.to_datetime(i) for i in t]
+    dist_res = [np.nan, 20707.888, 20682.199]
+    vel_res = [np.nan, 900.343, 153.201]
+    check_gps_data(res, x_proj, y_proj, z, t, dt, dist_res, vel_res)
     assert res.crs.to_epsg() == 2154
-    assert np.allclose(res.dt.values, [np.nan, 23.0, 135.0], equal_nan=True)
-    assert np.allclose(res.dist.values, [np.nan, 20707.888, 20682.199], equal_nan=True)
-    assert np.allclose(
-        res.velocity.values, [np.nan, 900.343, 153.201], equal_nan=True
-    )
 
 
 def test_add_attribute(simple_gps_data):
@@ -286,6 +310,10 @@ def test_concatenate(simple_gps_data):
     assert np.allclose(
         res.velocity.tolist(), simple_gps_data.velocity.tolist() * 2, equal_nan=True)
 
+    # Test empty case
+    with pytest.raises(ValueError):
+        gda.concatenate([])
+
 
 def test_concatenate_csr(simple_gps_data):
     a = simple_gps_data.to_crs(3857)
@@ -308,3 +336,7 @@ def test_concatenate_csr(simple_gps_data):
         res.dist.tolist(), simple_gps_data.dist.tolist() * 2, equal_nan=True)
     assert np.allclose(
         res.velocity.tolist(), simple_gps_data.velocity.tolist() * 2, equal_nan=True)
+
+    # Test different CRS
+    with pytest.raises(ValueError):
+        gda.concatenate([a, b])

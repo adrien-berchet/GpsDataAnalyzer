@@ -37,6 +37,8 @@ def test_extent():
     assert extent.ymin == extent[2] == 2
     assert extent.ymax == extent[3] == 3
     assert [i for i in extent] == [0, 1, 2, 3]
+    assert extent == extent
+    assert not extent != extent
 
 
 def test_extent_border():

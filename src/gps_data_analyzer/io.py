@@ -23,7 +23,8 @@ def save(obj, path, mode="w", **kwargs):
 
     # Convert datetime to string
     if obj._has_time:
-        tmp["datetime"] = tmp["datetime"].apply(pd.Timestamp.isoformat)
+        tmp["datetime"] = tmp["datetime"].apply(
+            pd.Timestamp.strftime, args=[obj.datetime_format])
 
     # Save to GeoPackage
     tmp.to_file(path, driver="GPKG", encoding="utf-8", **kwargs)
@@ -47,10 +48,6 @@ def _load(path):
         :py:class:`~gps_data_analyzer.gps_data.PoiPoints` object.
     """
     data = gpd.read_file(path, driver="GPKG")
-
-    # Convert time columns
-    if "datetime" in data.columns:
-        data["datetime"] = pd.to_datetime(data["datetime"])
 
     # If everything could be imported properly, the new object is returned
     return data

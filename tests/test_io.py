@@ -1,7 +1,8 @@
 import numpy as np
-import pandas as pd
 
 import gps_data_analyzer as gda
+
+from . import check_gps_data
 
 
 def test_save_load_gps_points(simple_gps_raw_data, simple_gps_data, gpkg_filepath):
@@ -15,17 +16,10 @@ def test_save_load_gps_points(simple_gps_raw_data, simple_gps_data, gpkg_filepat
     res = gda.load_gps_points(gpkg_filepath)
 
     # Check results
-    x, y, z, t = simple_gps_raw_data
-    assert res.x.tolist() == x
-    assert res.y.tolist() == y
-    assert res.z.tolist() == z
-    assert res.datetime.tolist() == [pd.to_datetime(i) for i in t]
-    assert np.allclose(res.dt.values, [np.nan, 23.0, 135.0], equal_nan=True)
-    assert np.allclose(res.dist.values, [np.nan, 15724.02, 15723.75], equal_nan=True)
-    assert np.allclose(
-        res.velocity.values, [np.nan, 683.6529, 116.4722], equal_nan=True
-    )
+    check_gps_data(res, *simple_gps_raw_data)
+    assert res.equals(simple_gps_data[res.columns])
     assert (res.test_col == 1).all()
+    assert res.crs.to_epsg() == 4326
 
 
 def test_save_load_gps_points_crs(simple_gps_raw_data, simple_gps_data, gpkg_filepath):
@@ -42,17 +36,9 @@ def test_save_load_gps_points_crs(simple_gps_raw_data, simple_gps_data, gpkg_fil
     res = gda.load_gps_points(gpkg_filepath)
 
     # Check results
-    x, y, z, t = simple_gps_raw_data
+    x, y, z, t, dt, dist, vel = simple_gps_raw_data
+    check_gps_data(res, projected.x, projected.y, projected.z, t, dt, dist, vel)
     assert res.equals(projected[res.columns])
-    assert np.allclose(res.x, projected.x)
-    assert np.allclose(res.y, projected.y)
-    assert np.allclose(res.z, projected.z)
-    assert res.datetime.tolist() == [pd.to_datetime(i) for i in t]
-    assert np.allclose(res.dt.values, [np.nan, 23.0, 135.0], equal_nan=True)
-    assert np.allclose(res.dist.values, [np.nan, 15724.02, 15723.75], equal_nan=True)
-    assert np.allclose(
-        res.velocity.values, [np.nan, 683.6529, 116.4722], equal_nan=True
-    )
     assert (res.test_col == 1).all()
     assert projected.crs.to_epsg() == 2154
     assert res.crs.to_epsg() == 2154
